@@ -1,0 +1,124 @@
+@import '~office-ui-fabric-react/dist/sass/References.scss';
+$gutter: 16px;
+
+@mixin flex {
+  display: flex;
+  flex-direction: row;
+  float: none;
+}
+
+@mixin flex-director-column {
+  flex-direction: column;
+}
+
+@mixin make-col($size, $columns: 12) {
+  flex: 0 0 percentage($size / $columns);
+  // Add a `max-width` to ensure content within each column does not blow out
+  // the width of the column. Applies to IE10+ and Firefox. Chrome and Safari
+  // do not appear to require this.
+  max-width: percentage($size / $columns);
+}
+
+@mixin spaceBetween {
+  justify-content: space-between;
+}
+
+.meeting {
+  .container {
+    width: '100%';
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
+    color: #0c0c0c;
+  }
+
+  .content {
+    padding-top: 10px;
+    padding-bottom: 15px;
+    position: relative;
+  }
+
+  .inline {
+    @include inline;
+  }
+
+
+
+  .ckbinlineFlex {
+    :global .ms-ChoiceFieldGroup {
+      @include inline;
+
+      lable {
+        padding-top: 10px;
+      }
+
+      :global .ms-ChoiceFieldGroup-flexContainer {
+        @include inline;
+
+        :global .ms-ChoiceField {
+          margin-left: 5px;
+          margin-right: 5px;
+        }
+
+        :global .ms-ChoiceField:first-child {
+          margin-left: 0;
+        }
+
+        :global .ms-ChoiceField:last-child {
+          margin-right: 0;
+        }
+      }
+    }
+  }
+
+  .spaceBetween {
+    @include spaceBetween;
+  }
+
+  .childInline {
+    >* {
+      margin-left: 10px;
+      margin-right: 10px;
+    }
+
+    >*:first-child {
+      margin-left: 0;
+    }
+
+    >*:last-child {
+      margin-right: 0;
+    }
+
+  }
+
+  .ckbspaceBetween {
+    :global .ms-ChoiceField {
+      @include spaceBetween;
+    }
+  }
+
+  .label-mg-b-10 {
+    label {
+      margin-bottom: 10px;
+    }
+  }
+
+  ::placeholder {
+    opacity: .5;
+  }
+
+  :global .ms-Label,
+  :global .ms-DetailsHeader-cell {
+    font-weight: 700;
+    font-size: .9rem
+  }
+
+  .row {
+    @include flex;
+    flex-wrap: wrap;
+    margin-right: -$gutter / 2;
+    margin-left: -$gutter / 2;
+  }
+
+
+  //SMALL
+  
+}

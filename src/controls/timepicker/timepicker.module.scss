@@ -1,0 +1,33 @@
+.timePicker {
+  .timePickerTable {
+    width: 200px;
+
+    .colHour,
+    .colSecond {
+      width: 43px;
+      display: table-cell;
+      text-align: center;
+
+      input[type='text'] {
+        padding-left: 5px;
+        padding-right: 5px;
+        text-align: center;
+      }
+    }
+
+    .colEmpty {
+      width: 6px;
+      display: table-cell;
+    }
+
+    .colbtn {
+      width: 50px;
+      display: table-cell;
+    }
+  }
+
+  .btn {
+    padding: 0 5px;
+    background-color: #dcdada;
+  }
+}

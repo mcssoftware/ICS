@@ -1,0 +1,105 @@
+import * as React from 'react';
+import styles from './Meeting.module.scss';
+import { IMeetingProps, IMeetingState } from './IMeeting';
+import { ChoiceGroup, IChoiceGroupOption, autobind, DefaultButton } from 'office-ui-fabric-react';
+import { Header, EnumTextAlign } from '../../../controls/header';
+import { Loading } from '../../../controls/loading';
+import Event from './EventForm/Event';
+import Agenda from './AgendaForm/Agenda';
+import css from '../../../utility/css';
+import { business } from '../../../business';
+import { McsUtil } from '../../../utility/helper';
+import { MaterialForm } from './MaterialForm/Material';
+
+export default class Meeting extends React.Component<IMeetingProps, IMeetingState> {
+
+  constructor(props: Readonly<IMeetingProps>) {
+    super(props);
+    this.state = {
+      committees: null,
+      event: null,
+      isLoaded: false,
+      selectedTab: 'Event'
+    };
+    business.onLoaded(() => {
+      this._onDataLoaded();
+    });
+  }
+
+  public render(): React.ReactElement<IMeetingProps> {
+    const { isLoaded, event, committees, selectedTab } = this.state;
+    const isNewEvent = !(McsUtil.isDefined(event) && McsUtil.isUnsignedInt(event.Id));
+
+    return (
+      <div className={styles["container-fluid"]}>
+        <div className={styles.row}>
+          <div className={styles["col-12"]}>
+            <ul className={css.combine(styles["list-group"], styles["list-group-horizontal"], styles["justify-content-between"])} style={{ marginBottom: '15px' }}>
+              {this._getTopNavList(isNewEvent).map((list) => {
+                const liclassnames = css.combine(styles["list-group-item"], styles.topnav, list.text == selectedTab ? styles.active : '', list.disabled ? styles.disabled : '');
+                const btnclassnames = css.combine(styles["topnav-btn"], list.text == selectedTab ? styles.active : '');
+                return (<li className={liclassnames}>
+                  <DefaultButton text={list.text} className={btnclassnames} disabled={list.disabled} onClick={() => this._onTabChoiceClicked(list)} />
+                </li>);
+              })}
+            </ul>
+          </div>
+        </div>
+        <div className={styles.row}>
+          <div className={styles["col-12"]}>
+            {!isLoaded && <Loading />}
+            {isLoaded && selectedTab === 'Event' && <Event event={event} committees={committees} />}
+            {isLoaded && !isNewEvent && selectedTab === 'Agenda' &&
+              <Agenda minDate={this.state.minDate} maxDate={this.state.maxDate} eventLookupId={event.Id} />}
+            {isLoaded && !isNewEvent && selectedTab === 'Materials' && <MaterialForm />}
+            {isLoaded && !isNewEvent && selectedTab === 'Minutes' && <div></div>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  private _onTabChoiceClicked = (option: any): void => {
+    this.setState({ selectedTab: option.key });
+  }
+
+  private _onDataLoaded = (): void => {
+    const event = business.get_Event();
+    const minDate = new Date(event.EventDate);
+    const maxDate = new Date(event.EndDate);
+    business.ensure_Folders(minDate.getFullYear(), event.Id);
+    this.setState({
+      isLoaded: true,
+      event: business.get_Event(),
+      committees: business.get_Committee(),
+      maxDate,
+      minDate
+    });
+  }
+
+  private _getTopNavList = (isNewEvent: boolean, committeeId?: string): any[] => {
+    const topNavList = [
+      {
+        key: 'Event',
+        text: 'Event'
+      },
+      {
+        key: 'Agenda',
+        text: 'Agenda',
+        disabled: isNewEvent
+      },
+      {
+        key: 'Materials',
+        text: 'Materials',
+        disabled: isNewEvent
+      },
+      {
+        key: 'Minutes',
+        text: 'Minutes',
+        disabled: true
+      }
+    ];
+    return topNavList;
+  }
+}

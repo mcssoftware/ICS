@@ -1,0 +1,25 @@
+@import '../../../scss/app.module.scss';
+
+.topnav {
+  // width: 25%;
+  flex-grow: 1;
+  text-align: center;
+  font-weight: 700;
+  padding-top: 0px !important;
+  padding-bottom: 0px !important;
+  border: none;
+  border-radius: 0 !important;
+
+
+
+  .topnav-btn {
+    border: none;
+
+    &.active {
+      z-index: 2; // Place active items above their siblings for proper border styling
+      color: $list-group-active-color;
+      background-color: $list-group-active-bg;
+      border-color: $list-group-active-border-color;
+    }
+  }
+}

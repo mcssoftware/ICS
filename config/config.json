@@ -1,0 +1,19 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "meeting-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/meeting/MeetingWebPart.js",
+          "manifest": "./src/webparts/meeting/MeetingWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "MeetingWebPartStrings": "lib/webparts/meeting/loc/{locale}.js",
+    "ControlStrings": "node_modules/@pnp/spfx-controls-react/lib/loc/{locale}.js"
+  }
+}

@@ -1,0 +1,37 @@
+$grid-gutter-width: 16px;
+
+.checkbox-label-inline {
+  :global .ms-ChoiceFieldGroup {
+    display: flex;
+
+    >label {
+      padding-top: 10px;
+    }
+  }
+}
+
+.checkbox-items-inline {
+  :global .ms-ChoiceFieldGroup-flexContainer {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  :global .ms-ChoiceField {
+    margin-left: $grid-gutter-width/2;
+    margin-right: $grid-gutter-width/2;
+
+    &:first-child {
+      margin-left: 0;
+    }
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+}
+
+.checkbox-item-space-between {
+  :global .ms-ChoiceFieldGroup-flexContainer {
+    justify-content: space-between;
+  }
+}
