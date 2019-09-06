@@ -16,10 +16,9 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
   constructor(props: Readonly<IMeetingProps>) {
     super(props);
     this.state = {
-      committees: null,
-      event: null,
       isLoaded: false,
-      selectedTab: 'Event'
+      selectedTab: 'Event',
+      isNewEvent: true
     };
     business.onLoaded(() => {
       this._onDataLoaded();
@@ -27,8 +26,11 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
   }
 
   public render(): React.ReactElement<IMeetingProps> {
-    const { isLoaded, event, committees, selectedTab } = this.state;
-    const isNewEvent = !(McsUtil.isDefined(event) && McsUtil.isUnsignedInt(event.Id));
+    const { isLoaded, selectedTab, isNewEvent } = this.state;
+    const event = business.get_Event();
+    // let isNewEvent = true;
+    let minDate: Date = undefined;
+    let maxDate: Date = undefined;
 
     return (
       <div className={styles["container-fluid"]}>
@@ -48,9 +50,12 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
         <div className={styles.row}>
           <div className={styles["col-12"]}>
             {!isLoaded && <Loading />}
-            {isLoaded && selectedTab === 'Event' && <Event event={event} committees={committees} />}
+            {isLoaded && selectedTab === 'Event' &&
+              <Event event={event}
+                committees={business.get_Committee()}
+                onChange={this._eventAddedOrUpdated} />}
             {isLoaded && !isNewEvent && selectedTab === 'Agenda' &&
-              <Agenda minDate={this.state.minDate} maxDate={this.state.maxDate} eventLookupId={event.Id} />}
+              <Agenda minDate={minDate} maxDate={maxDate} eventLookupId={event.Id} />}
             {isLoaded && !isNewEvent && selectedTab === 'Materials' && <MaterialForm />}
             {isLoaded && !isNewEvent && selectedTab === 'Minutes' && <div></div>}
           </div>
@@ -66,16 +71,28 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
 
   private _onDataLoaded = (): void => {
     const event = business.get_Event();
-    const minDate = new Date(event.EventDate);
-    const maxDate = new Date(event.EndDate);
-    business.ensure_Folders(minDate.getFullYear(), event.Id);
+    let isNewEvent = true;
+    if (McsUtil.isDefined(event)) {
+      if (event.Id > 0) {
+        isNewEvent = false;
+      }
+    }
     this.setState({
       isLoaded: true,
-      event: business.get_Event(),
-      committees: business.get_Committee(),
-      maxDate,
-      minDate
+      isNewEvent
     });
+  }
+
+  private _eventAddedOrUpdated = (): void => {
+    const event = business.get_Event();
+    if (this.state.isNewEvent) {
+      if (event.Id > 0) {
+        const startdate = new Date(event.EventDate);
+        business.ensure_Folders(startdate.getFullYear(), event.Id);
+      }
+    }
+    // to ensure component is refreshed.
+    this.setState({ isLoaded: true });
   }
 
   private _getTopNavList = (isNewEvent: boolean, committeeId?: string): any[] => {

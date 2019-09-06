@@ -4,6 +4,7 @@ import { IDbCommittee } from "../../../../interface/dbmodal";
 export interface IEventProps {
   event: ISpEvent;
   committees: IDbCommittee[];
+  onChange: () => void;
 }
 
 export interface IEventState {

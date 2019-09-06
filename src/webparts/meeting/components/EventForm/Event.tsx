@@ -8,6 +8,9 @@ import Select from 'react-select';
 import { findStateOption, usStates } from '../../../../utility/usstates';
 import { Timepicker } from '../../../../controls/timepicker';
 import { McsUtil } from '../../../../utility/helper';
+import { ISpEvent } from '../../../../interface/spmodal';
+import { business } from '../../../../business';
+import { SPEvent } from '@microsoft/sp-core-library';
 
 export default class Event extends React.Component<IEventProps, IEventState> {
 
@@ -29,6 +32,12 @@ export default class Event extends React.Component<IEventProps, IEventState> {
     public render(): React.ReactElement<IEventProps> {
         const { event, startDate, endDate, selectedState } = this.state;
         const marginClassName = css.combine(styles["ml-2"], styles["mr-2"]);
+        let minStartDate: Date;
+        let maxStartDate: Date;
+        if (event.Id > 0) {
+            minStartDate = new Date(startDate.getFullYear(), 1, 1, 0, 0, 0);
+            maxStartDate = new Date(startDate.getFullYear(), 12, 31, 23, 59, 59);
+        }
         return (
             <div>
                 <div className={styles.row}>
@@ -79,6 +88,8 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                                 ariaLabel="Select start date"
                                 onSelectDate={this._onStartDateSelected}
                                 value={startDate}
+                                minDate={minStartDate}
+                                maxDate={maxStartDate}
                             />
                         </div>
                     </div>
@@ -101,6 +112,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                                 ariaLabel="Select end date"
                                 onSelectDate={this._onEndDateSelected}
                                 value={endDate}
+                                minDate={startDate}
                             />
                         </div>
                     </div>
@@ -215,5 +227,42 @@ export default class Event extends React.Component<IEventProps, IEventState> {
 
     private _isDirty = (newEvent: any): boolean => {
         return JSON.stringify(this.props.event) !== JSON.stringify(newEvent);
+    }
+
+    private _saveEvent = (): void => {
+        const { event } = this.state;
+
+        const propertiesToUpdate: ISpEvent = {
+            EventDate: (new Date(this.state.startDate.toLocaleDateString())).toISOString(),
+            EndDate: (new Date(this.state.endDate.toLocaleDateString())).toISOString(),
+            MeetingStartTime: event.MeetingStartTime,
+            Location: event.Location,
+            Description: event.Description,
+            fAllDayEvent: true,
+            Title: `${Mcs.WebConstants.webTitle} Committee Meeting ${this.state.startDate.toLocaleDateString()}`,
+            Category: event.Category,
+            WorkAddress: event.WorkAddress,
+            WorkCity: event.WorkCity,
+            WorkState: event.WorkState,
+            OtherLocationInfo: event.OtherLocationInfo,
+            CommitteeStaff: event.CommitteeStaff,
+            ConferenceNumber: event.ConferenceNumber,
+            ApprovedStatus: event.ApprovedStatus,
+            JointEventCommitteeId: event.JointEventCommitteeId,
+            CommitteeLookupId: event.CommitteeLookupId,
+            CommitteeEventLookupId: event.CommitteeEventLookupId,
+            HasLiveStream: event.HasLiveStream,
+            IsBudgetHearing: event.IsBudgetHearing
+        };
+        let promise: Promise<ISpEvent>;
+        if (event.Id > 0) {
+            promise = business.edit_Event(event.Id, event["odata.type"], propertiesToUpdate);
+        } else {
+            promise = business.add_Event(propertiesToUpdate);
+        }
+        promise.then((newevent) => {
+            this.setState({ event: newevent });
+            this.props.onChange();
+        }).catch(() => { });
     }
 }

@@ -544,6 +544,7 @@ class BusinessLogic {
         const startdate = new Date(meetingdate.getFullYear(), meetingdate.getMonth(), meetingdate.getDate(), 8, 30, 0, 0);
         const endate = new Date(meetingdate.getFullYear(), meetingdate.getMonth(), meetingdate.getDate(), 23, 0, 0, 0);
         return {
+            Id: 0,
             ApprovedStatus: '(none)',
             CommitteeEventLookupId: null,
             CommitteeStaff: '',
