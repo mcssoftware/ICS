@@ -179,7 +179,7 @@ class BusinessLogic {
         });
     }
 
-    public add_Presenter(properties: ISpAgendaTopic): Promise<ISpPresenter> {
+    public add_Presenter(properties: ISpPresenter): Promise<ISpPresenter> {
         return new Promise((resolve, reject) => {
             service.addItemToSpList(Mcs.WebConstants.meetingPresenterListId, false, properties)
                 .then((newpresenter: ISpPresenter) => {

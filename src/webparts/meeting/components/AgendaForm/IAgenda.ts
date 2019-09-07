@@ -30,7 +30,8 @@ export interface IAgendaFormProps {
   agendaNumber: number;
   minDate?: Date;
   maxDate?: Date;
-  closeModal?: (newAgenda?: IComponentAgenda) => void;
+  onChange: (topic: IComponentAgenda, parentTopicId?: number) => void;
+  onCancel: () => void;
 }
 
 export interface IAgendaFormState {

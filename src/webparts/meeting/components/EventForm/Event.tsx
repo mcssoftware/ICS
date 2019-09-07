@@ -175,7 +175,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                 </div>
                 <div className={styles.row}>
                     <div className={css.combine(styles["col-12"], styles["d-flex"], styles["justify-content-around"], styles["mt-2"])}>
-                        <PrimaryButton text="Save" />
+                        <PrimaryButton text="Save" onClick={this._saveEvent} />
                         <PrimaryButton text="Print View" />
                         <PrimaryButton text="Publish" />
                         <PrimaryButton text="Add committees to this meeting" />

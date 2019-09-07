@@ -12,6 +12,7 @@ import { MaterialDisplay } from './MaterialDisplay';
 import { ISpEventMaterial } from '../../../../interface/spmodal';
 import AgendaForm from './AgendaForm';
 import MaterialForm from '../MaterialForm/MaterialForm';
+import { findIndex } from '@microsoft/sp-lodash-subset';
 
 export default class Agenda extends React.Component<IAgendaProps, IAgendaState> {
 
@@ -73,12 +74,13 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                                 minDate={this.props.minDate}
                                 maxDate={this.props.maxDate}
                                 eventLookupId={this.props.eventLookupId}
+                                onChange={this._onNewAgendaAddedOrEdited}
+                                onCancel={this._hidePanel}
                             />
                         }
                         {panelType == AgendaPanelType.uploadDocument &&
                             <MaterialForm requireAgendaSelection={false} document={panelItem} agenda={[selectedAgendaItem]} />}
                     </div>
-
                 </Panel>
             </div>
         );
@@ -88,7 +90,28 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
         this.setState({ showPanel: false });
     }
 
-    private _onTopicAdd = (agenda: IComponentAgenda): void => {
+    private _onNewAgendaAddedOrEdited = (topic: IComponentAgenda, parentTopicId?: number): void => {
+        const agendaCopy = [...this.state.agendaItems];
+        if (McsUtil.isDefined(parentTopicId)) {
+            const agendaIndex = findIndex(agendaCopy, a => a.Id === parentTopicId);
+            const subtopicIndex = findIndex(agendaCopy[agendaIndex].SubTopics, topic.Id);
+            if (subtopicIndex >= 0) {
+                agendaCopy[agendaIndex].SubTopics[subtopicIndex] = topic;
+            } else {
+                agendaCopy[agendaIndex].SubTopics.push(topic);
+            }
+        } else {
+            const agendaIndex = findIndex(agendaCopy, a => a.Id === topic.Id);
+            if (agendaIndex >= 0) {
+                agendaCopy[agendaIndex] = topic;
+            } else {
+                agendaCopy.push(topic);
+            }
+        }
+        this.setState({ agendaItems: agendaCopy, showPanel: false });
+    }
+
+    private _onTopicAddButtonClicked = (agenda: IComponentAgenda): void => {
         this.setState({
             showPanel: true,
             panelType: AgendaPanelType.topic,
@@ -221,7 +244,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 //     this._onTopicAdd();
                 // }
                 onClick: () => {
-                    this._onTopicAdd(null);
+                    this._onTopicAddButtonClicked(null);
                 }
             },
             {
@@ -234,7 +257,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 ariaLabel: 'Edit Agenda',
                 disabled: !agendaSelected,
                 onClick: () => {
-                    this._onTopicAdd(this.state.selectedAgendaItem);
+                    this._onTopicAddButtonClicked(this.state.selectedAgendaItem);
                 }
             },
             {

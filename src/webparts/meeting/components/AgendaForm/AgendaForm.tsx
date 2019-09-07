@@ -5,10 +5,12 @@ import styles from '../Meeting.module.scss';
 import { Checkbox, TextField, DefaultButton, IconButton, IIconProps, DatePicker, DayOfWeek } from 'office-ui-fabric-react';
 import css from '../../../../utility/css';
 import { McsUtil } from '../../../../utility/helper';
-import { sortBy } from "@microsoft/sp-lodash-subset";
-import { ISpPresenter } from '../../../../interface/spmodal';
+import { sortBy, cloneDeep, findIndex } from "@microsoft/sp-lodash-subset";
+import { ISpPresenter, ISpAgendaTopic } from '../../../../interface/spmodal';
 import datePickerStrings from '../../../../utility/datePickerStrings';
 import { Timepicker } from '../../../../controls/timepicker';
+import { business } from '../../../../business';
+import { IComponentAgenda } from '../../../../business/transformAgenda';
 
 const userRemoveIcon: IIconProps = { iconName: 'UserRemove' };
 const editContactIcon: IIconProps = { iconName: 'EditContact' };
@@ -36,6 +38,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
             }
         }
         const defaultAgenda = {
+            Id: 0,
             Title: '',
             AgendaTitle: '',
             AgendaNumber: props.agendaNumber,
@@ -48,7 +51,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
             AgendaDate: new Date()
         };
         this.state = {
-            agenda: McsUtil.isDefined(props.agenda) ? props.agenda : defaultAgenda,
+            agenda: McsUtil.isDefined(props.agenda) ? cloneDeep(props.agenda) : defaultAgenda,
             agendaDate,
             useTime,
             presenter: this._getDefaultPresenter(),
@@ -152,8 +155,8 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                 </div >
             </div>
             <div className={styles["mt-3"]}>
-                <DefaultButton text="Save" className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])} />
-                <DefaultButton text="Cancel" className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])} />
+                <DefaultButton text="Save" className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])} onClick={this._onSaveClicked} />
+                <DefaultButton text="Cancel" className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])} onClick={this._dismisModal} />
             </div>
         </div>
         );
@@ -170,18 +173,120 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
         this.setState({ useTime: checked });
     }
 
+    private _onSaveClicked = (): void => {
+        const { agenda } = this.state;
+        const presenters = agenda.Presenters;
+        let newPresenters: ISpPresenter[] = [];
+        // find all presenters in props not in state
+        const deletedPresenters = this.props.agenda.Presenters.filter(a => findIndex(presenters, p => p.Id === a.Id) < 0);
+        Promise.all([this._addPresenters(presenters.filter(a => a.Id == 0)),
+        this._editPresenters(presenters.filter(a => a.Id > 0,
+            this._deletePresenters(deletedPresenters)))])
+            .then((responses) => {
+                newPresenters = sortBy(responses[0].concat(responses[1]), a => a.SortNumber);
+                const agendaPropertiesToUpdate: ISpAgendaTopic = {
+                    Title: agenda.AgendaTitle.length > 20 ? (agenda.AgendaTitle.substr(0, 20) + '...') : agenda.AgendaTitle,
+                    AgendaTitle: agenda.AgendaTitle,
+                    AgendaNumber: agenda.AgendaNumber,
+                    AgendaDate: agenda.AgendaDate,
+                    EventLookupId: this.props.eventLookupId,
+                    PresentersLookupId: {
+                        __metadata: {
+                            type: "Collection(Edm.Int32)"
+                        },
+                        results: newPresenters.map(a => a.Id)
+                    },
+                    ParentTopicId: this.props.isSubTopic ? this.props.parentTopicId : null,
+                    // AgendaDocumentsLookupId?: IMultipleLookupField; // we are not updating this on agenda
+                    // Presenters?: Array<ISpPresenter>;
+                    AllowPublicComments: agenda.AllowPublicComments
+                };
+                let promise = agenda.Id > 0 ? business.edit_Agenda(agenda.Id, agenda["odata.type"], agendaPropertiesToUpdate) :
+                    business.add_Agenda(agendaPropertiesToUpdate);
+                promise.then((result: IComponentAgenda) => {
+                    result.Presenters = newPresenters;
+                    result.Documents = [...agenda.Documents];
+                    if (this.props.isSubTopic) {
+                        result.SubTopics = [];
+                    } else {
+                        result.SubTopics = [...agenda.SubTopics];
+                    }
+                    this.setState({ agenda: result });
+                    this.props.onChange(agenda);
+                });
+
+            });
+    }
+
     private _dismisModal = (): void => {
-        if (McsUtil.isFunction(this.props.closeModal)) {
-            this.props.closeModal();
-        }
+        this.props.onCancel();
     }
 
     private _getDefaultPresenter = (): ISpPresenter => {
+        let sortNumber = 1;
+        if (McsUtil.isDefined(this.state.agenda)) {
+            if (McsUtil.isArray(this.state.agenda.Presenters) && this.state.agenda.Presenters.length > 0) {
+                sortNumber = this.state.agenda.Presenters[this.state.agenda.Presenters.length - 1].SortNumber + 1;
+            } else {
+                sortNumber = 1;
+            }
+        }
         return {
+            Id: 0,
             Title: '',
-            SortNumber: undefined,
+            SortNumber: sortNumber,
             PresenterName: '',
-            OrganizationName: ''
+            OrganizationName: '',
         };
+    }
+
+    private _addPresenters = (presentersToAdd: ISpPresenter[]): Promise<ISpPresenter[]> => {
+        return new Promise((resolve, reject) => {
+            if (McsUtil.isArray(presentersToAdd) && presentersToAdd.length > 0) {
+                Promise.all(presentersToAdd.map(a => business.add_Presenter({
+                    Title: a.Title,
+                    SortNumber: a.SortNumber,
+                    PresenterName: a.PresenterName,
+                    OrganizationName: a.OrganizationName
+                }))).then((responses: ISpPresenter[]) => {
+                    resolve(responses);
+                });
+            } else {
+                resolve([]);
+            }
+        });
+    }
+
+    private _editPresenters = (presentersToEdit: ISpPresenter[]): Promise<ISpPresenter[]> => {
+        return new Promise((resolve, reject) => {
+            if (McsUtil.isArray(presentersToEdit) && presentersToEdit.length > 0) {
+                Promise.all(presentersToEdit.map(a => business.edit_Presenter(
+                    a.Id,
+                    a["odata.type"],
+                    {
+                        Title: a.Title,
+                        SortNumber: a.SortNumber,
+                        PresenterName: a.PresenterName,
+                        OrganizationName: a.OrganizationName
+                    }))).then((responses: ISpPresenter[]) => {
+                        resolve(responses);
+                    });
+            } else {
+                resolve([]);
+            }
+        });
+    }
+
+    private _deletePresenters = (presentersToAdd: ISpPresenter[]): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            if (McsUtil.isArray(presentersToAdd) && presentersToAdd.length > 0) {
+                Promise.all(presentersToAdd.map(a => business.delete_Presenter(a.Id)))
+                    .then(() => {
+                        resolve();
+                    });
+            } else {
+                resolve();
+            }
+        });
     }
 }
