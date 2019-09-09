@@ -20,7 +20,6 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
 
     constructor(props: Readonly<IAgendaFormProps>) {
         super(props);
-        debugger;
         let useTime = true;
         let agendaDate = McsUtil.isDefined(props.minDate) ? props.minDate : new Date();
         let agendaTime = '08:00:00 AM';
@@ -50,11 +49,12 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
             Documents: [],
             AgendaDate: new Date()
         };
+        const agenda = McsUtil.isDefined(props.agenda) ? cloneDeep(props.agenda) : defaultAgenda;
         this.state = {
-            agenda: McsUtil.isDefined(props.agenda) ? cloneDeep(props.agenda) : defaultAgenda,
+            agenda,
             agendaDate,
             useTime,
-            presenter: this._getDefaultPresenter(),
+            presenter: this._getDefaultPresenter(agenda),
             agendaTime,
             waitingMessage: ''
         };
@@ -62,7 +62,9 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
 
     public render(): React.ReactElement<IAgendaFormProps> {
         const { isSubTopic } = this.props;
-        const { useTime, agenda, agendaTime, agendaDate, waitingMessage } = this.state;
+        const { useTime, agenda, agendaTime, agendaDate, waitingMessage, presenter } = this.state;
+        const cansaveAgenda = this._canSaveAgenda(agenda);
+        const canSavePresenter = this._canSavePresenter(presenter);
         return (<div className={css.combine(styles["d-flex"], styles["flex-column"], styles["justify-content-between"])}>
             <div className={styles["mb-3"]}>
                 <div className={styles["container-fluid"]}>
@@ -97,16 +99,24 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                     <div className={styles.row}>
                         {isSubTopic &&
                             <div className={styles["col-4"]}>
-                                <TextField label="Number" type="number" value={agenda.AgendaNumber.toString()} />
+                                <TextField label="Number"
+                                    type="number"
+                                    name="AgendaNumber"
+                                    onGetErrorMessage={(value) => /\d+/.test(value) ? undefined : 'Must be numberic'}
+                                    data-validation={'\d+'}
+                                    onChange={this._onAgendaTextChanged}
+                                    value={agenda.AgendaNumber.toString()} />
                             </div>
                         }
                         <div className={isSubTopic ? styles["col-9"] : styles["col-12"]}>
-                            <TextField label="Title" multiline rows={3} />
+                            <TextField label="Title" name="AgendaTitle" multiline rows={3} required onChange={this._onAgendaTextChanged} />
                         </div>
                     </div>
                     <div className={styles.row}>
                         <div className={styles["col-12"]}>
-                            <Checkbox label="Allow public comment?" className={styles["mt-2"]} defaultChecked={false} onChange={this._onUseTimeChanged} />
+                            <Checkbox label="Allow public comment?" className={styles["mt-2"]}
+                                defaultChecked={agenda.AllowPublicComments}
+                                onChange={this._onAllowPublicCommentChanged} />
                         </div>
                     </div>
                     {/* Presenter Form */}
@@ -121,12 +131,22 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                         </thead>
                         <tbody style={{ minWidth: "20px" }}>
                             {McsUtil.isDefined(agenda) && McsUtil.isArray(agenda.Presenters) &&
-                                sortBy(agenda.Presenters, a => a.SortNumber).map((p) => {
-                                    return (<tr>
+                                sortBy(agenda.Presenters, a => a.SortNumber).map((p, index) => {
+                                    return (<tr className={p.Id === presenter.Id ? css.combine(styles["bg-info"], styles["text-white"]) : ''}>
                                         <td className={css.combine(styles["d-flex"], styles["justify-content-between"])}>
                                             <div>
-                                                <IconButton iconProps={userRemoveIcon} title="PresenterRemove" ariaLabel="PresenterRemove" />
-                                                <IconButton iconProps={editContactIcon} title="PresenterEdit" ariaLabel="PresenterEdit" />
+                                                <IconButton iconProps={userRemoveIcon}
+                                                    title="PresenterRemove"
+                                                    ariaLabel="PresenterRemove"
+                                                    name={'edit'+index.toString()}
+                                                    onClick={this._onEditPresenterClicked}
+                                                />
+                                                <IconButton
+                                                    iconProps={editContactIcon}
+                                                    title="PresenterEdit"
+                                                    ariaLabel="PresenterEdit"
+                                                    name={'delete'+index.toString()}
+                                                    onClick={this._onDeletePresenterClicked} />
                                             </div>
                                             <div>{p.SortNumber}</div>
                                         </td>
@@ -139,15 +159,24 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td><TextField name="SortNumber" type='number' /></td>
-                                <td><TextField name="PresenterName" /></td>
-                                <td><TextField name="Title" /></td>
-                                <td><TextField name="OrganizationName" /></td>
+                                <td><TextField name="SortNumber"
+                                    type='number'
+                                    data-validation={'\d+'}
+                                    value={presenter.SortNumber.toString()} required onChange={this._onPresenterTextChanged} /></td>
+                                <td><TextField name="PresenterName" value={presenter.PresenterName} required onChange={this._onPresenterTextChanged} /></td>
+                                <td><TextField name="Title" value={presenter.Title} onChange={this._onPresenterTextChanged} /></td>
+                                <td><TextField name="OrganizationName" value={presenter.OrganizationName} onChange={this._onPresenterTextChanged} /></td>
                             </tr>
                             <tr>
                                 <td colSpan={3}>
-                                    <DefaultButton text="Add Presenter" className={css.combine(styles["mr-2"], styles["bg-secondary"], styles["text-white"])} />
-                                    <DefaultButton text="Clear Presenter" className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])} />
+                                    <DefaultButton text="Add Presenter"
+                                        disabled={!canSavePresenter}
+                                        className={css.combine(styles["mr-2"], styles["bg-secondary"], styles["text-white"])}
+                                        onClick={this._onSavePresenterClicked} />
+                                    <DefaultButton text="Clear Presenter"
+                                        className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])}
+                                        onClick={this._clearPresenterClicked}
+                                    />
                                 </td>
                             </tr>
                         </tfoot>
@@ -155,13 +184,32 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                 </div >
             </div>
             <div className={styles["mt-3"]}>
-                <DefaultButton text="Save" className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])} onClick={this._onSaveClicked} />
-                <DefaultButton text="Cancel" className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])} onClick={this._dismisModal} />
+                <DefaultButton text="Save"
+                    className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
+                    disabled={!cansaveAgenda}
+                    onClick={this._onSaveClicked} />
+                <DefaultButton text="Cancel"
+                    className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])}
+                    onClick={this._dismisModal} />
             </div>
 
             <Waiting message={waitingMessage} />
         </div>
         );
+    }
+
+    private _canSaveAgenda = (agenda: IComponentAgenda): boolean => {
+        if (McsUtil.isDefined(agenda) && McsUtil.isString(agenda.AgendaTitle) && !this._canSavePresenter(this.state.presenter)) {
+            if (this.props.isSubTopic) {
+                return McsUtil.isUnsignedInt(agenda.AgendaNumber);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private _canSavePresenter = (presenter: ISpPresenter): boolean => {
+        return McsUtil.isUnsignedInt(presenter.SortNumber) && McsUtil.isString(presenter.PresenterName);
     }
 
     private _onTimeChanged = (newValue: string): void => {
@@ -175,14 +223,54 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
         this.setState({ useTime: checked });
     }
 
+    private _onAgendaTextChanged = (ev: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, value?: string): void => {
+        const { agenda } = this.state;
+        const inputElement = ev.target as HTMLInputElement;
+        const propertyName = inputElement.name;
+        if (agenda.hasOwnProperty(propertyName)) {
+            const validation = inputElement.getAttribute('data-validation');
+            let isvalid = true;
+            if (McsUtil.isString(validation) && value.length > 0) {
+                isvalid = new RegExp(validation).test(value);
+            }
+            if (isvalid) {
+                agenda[propertyName] = (value.length > 0) && /number/i.test(inputElement.type) ? parseInt(value) : value;
+                this.setState({ agenda });
+            }
+        }
+    }
+
+    private _onPresenterTextChanged = (ev: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, value?: string): void => {
+        const { presenter } = this.state;
+        const inputElement = ev.target as HTMLInputElement;
+        const propertyName = inputElement.name;
+        if (presenter.hasOwnProperty(propertyName)) {
+            const validation = inputElement.getAttribute('data-validation');
+            let isvalid = true;
+            if (McsUtil.isString(validation) && value.length > 0) {
+                isvalid = new RegExp(validation).test(value);
+            }
+            if (isvalid) {
+                presenter[propertyName] = (value.length > 0) && /number/i.test(inputElement.type) ? parseInt(value) : value;
+                this.setState({ presenter });
+            }
+        }
+    }
+
+    private _onAllowPublicCommentChanged = (ev?: any, checked?: boolean): void => {
+        const agenda = { ...this.state.agenda };
+        agenda.AllowPublicComments = checked;
+        this.setState({ agenda });
+    }
+
     private _onSaveClicked = (): void => {
         const { agenda } = this.state;
         const presenters = agenda.Presenters;
         let newPresenters: ISpPresenter[] = [];
         // find all presenters in props not in state
-        this.setState({waitingMessage: 'Adding or editing agenda.'});
+        this.setState({ waitingMessage: 'Adding or editing agenda.' });
         const deletedPresenters = this.props.agenda.Presenters.filter(a => findIndex(presenters, p => p.Id === a.Id) < 0);
-        Promise.all([this._addPresenters(presenters.filter(a => a.Id == 0)),
+        Promise.all([this._addPresenters(presenters.filter(a => a.Id < 1)),
         this._editPresenters(presenters.filter(a => a.Id > 0,
             this._deletePresenters(deletedPresenters)))])
             .then((responses) => {
@@ -221,15 +309,48 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
             });
     }
 
+    private _onEditPresenterClicked = (ev: any): void => {
+        const target = ev.target as HTMLButtonElement;
+        this.setState({ presenter: this.state.agenda.Presenters[parseInt(target.name.replace(/[a-z]*/i,''))] });
+    }
+
+    private _onDeletePresenterClicked = (ev: any): void => {
+        if (confirm("Do you want to remove presenter?")) {
+            const target = ev.target as HTMLButtonElement;
+            const { agenda } = this.state;
+            agenda.Presenters.splice(parseInt(target.name.replace(/[a-z]*/i,'')), 1);
+            this.setState({ agenda });
+        }
+    }
+
+    private _onSavePresenterClicked = (): void => {
+        const { agenda, presenter } = this.state;
+        if (presenter.Id !== 0) {
+            const index = findIndex(agenda.Presenters, presenter.Id);
+            if (index > -1) {
+                agenda.Presenters[index] = presenter;
+            }
+        } else {
+            const tempPresenter = { ...presenter };
+            tempPresenter.Id = -1;
+            agenda.Presenters.push(presenter);
+        }
+        this.setState({ agenda, presenter: this._getDefaultPresenter(agenda) });
+    }
+
+    private _clearPresenterClicked = (): void => {
+        this.setState({ presenter: this._getDefaultPresenter(this.state.agenda) });
+    }
+
     private _dismisModal = (): void => {
         this.props.onCancel();
     }
 
-    private _getDefaultPresenter = (): ISpPresenter => {
+    private _getDefaultPresenter = (agenda): ISpPresenter => {
         let sortNumber = 1;
-        if (McsUtil.isDefined(this.state.agenda)) {
-            if (McsUtil.isArray(this.state.agenda.Presenters) && this.state.agenda.Presenters.length > 0) {
-                sortNumber = this.state.agenda.Presenters[this.state.agenda.Presenters.length - 1].SortNumber + 1;
+        if (McsUtil.isDefined(agenda)) {
+            if (McsUtil.isArray(agenda.Presenters) && agenda.Presenters.length > 0) {
+                sortNumber = agenda.Presenters[agenda.Presenters.length - 1].SortNumber + 1;
             } else {
                 sortNumber = 1;
             }

@@ -11,6 +11,7 @@ import { McsUtil } from '../../../../utility/helper';
 import { ISpEvent } from '../../../../interface/spmodal';
 import { business } from '../../../../business';
 import { Waiting } from '../../../../controls/waiting';
+import { Informational, InformationalType } from '../../../../controls/informational';
 
 export default class Event extends React.Component<IEventProps, IEventState> {
 
@@ -26,7 +27,9 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             endDate,
             selectedState: findStateOption(props.event.WorkState),
             isDirty: false,
-            waitingMessage: 'test message'
+            waitingMessage: '',
+            message: '',
+            messageType: InformationalType.none
         };
     }
 
@@ -171,7 +174,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                         <Toggle className={marginClassName} label="Will meeting be live streamed?" />
                     </div>
                     <div className={styles["col-sm-6"]}>
-                        <Toggle className={marginClassName} label="Is budget hearing?" />
+                        <Toggle className={marginClassName} label="Is budget hearing?" disabled={business.get_Documents().length > 0} />
                     </div>
                 </div>
                 <div className={styles.row}>
@@ -180,6 +183,11 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                         <PrimaryButton text="Print View" />
                         <PrimaryButton text="Publish" />
                         <PrimaryButton text="Add committees to this meeting" />
+                    </div>
+                </div>
+                <div className={styles.row}>
+                    <div className={styles["col-sm-12"]}>
+                        <Informational message={this.state.message} type={this.state.messageType} />
                     </div>
                 </div>
                 <Waiting message={waitingMessage} />
@@ -258,10 +266,10 @@ export default class Event extends React.Component<IEventProps, IEventState> {
         };
         let promise: Promise<ISpEvent>;
         if (event.Id > 0) {
-            this.setState({waitingMessage: 'Editing meeting'});
+            this.setState({ waitingMessage: 'Editing meeting' });
             promise = business.edit_Event(event.Id, event["odata.type"], propertiesToUpdate);
         } else {
-            this.setState({waitingMessage: 'Adding meeting'});
+            this.setState({ waitingMessage: 'Adding meeting' });
             promise = business.add_Event(propertiesToUpdate);
         }
         promise.then((newevent) => {

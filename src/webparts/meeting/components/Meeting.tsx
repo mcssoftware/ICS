@@ -17,15 +17,20 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
     this.state = {
       isLoaded: false,
       selectedTab: 'Event',
-      isNewEvent: true
+      isNewEvent: true,
+      message: 'Loading'
     };
-    business.onLoaded(() => {
-      this._onDataLoaded();
+    business.onLoaded((error: any) => {
+      if (!McsUtil.isDefined(error)) {
+        this._onDataLoaded();
+      } else {
+        this.setState({ isLoaded: false, message: error.response.statusText });
+      }
     });
   }
 
   public render(): React.ReactElement<IMeetingProps> {
-    const { isLoaded, selectedTab, isNewEvent } = this.state;
+    const { isLoaded, selectedTab, isNewEvent, message } = this.state;
     const event = business.get_Event();
     let minDate: Date = undefined;
     let maxDate: Date = undefined;
@@ -47,7 +52,7 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
         </div>
         <div className={styles.row}>
           <div className={styles["col-12"]}>
-            {!isLoaded && <Waiting message={'Loading event'} />}
+            {!isLoaded && <Waiting message={message} />}
             {isLoaded && selectedTab === 'Event' &&
               <Event event={event}
                 committees={business.get_Committee()}

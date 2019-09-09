@@ -29,7 +29,9 @@ class BusinessLogic {
     private _config: IBusinessLogicConfig;
     private _documentFolderStructure: IFolderCreation;
 
-    private _callbackOnLoaded: Array<() => void>;
+    private _callbackOnLoaded: Array<(reject: any) => void>;
+
+    private _onloadError: any;
 
     constructor() {
         this._config = {} as IBusinessLogicConfig;
@@ -55,9 +57,9 @@ class BusinessLogic {
      * @param {() => void} callback
      * @memberof BusinessLogic
      */
-    public onLoaded(callback: () => void): void {
+    public onLoaded(callback: (reject: any) => void): void {
         if (McsUtil.isDefined(this._event)) {
-            callback();
+            callback(this._onloadError);
         } else {
             this._callbackOnLoaded.push(callback);
         }
@@ -296,23 +298,27 @@ class BusinessLogic {
         return new Promise((resolve, reject) => {
             const queryParameters: UrlQueryParameterCollection = new UrlQueryParameterCollection(window.location.href);
             this._eventId = 0;
-            if (McsUtil.isNumberString(queryParameters.getValue("bdrid"))) {
+            if (McsUtil.isNumberString(queryParameters.getValue("calendaritemid"))) {
                 this._eventId = parseInt(queryParameters.getValue("calendaritemid"), 10);
             }
-            this._eventId = 1;
             this._loadCommitteeLinks().then(() => {
                 return Promise.all([this._loadEvent(), this._loadAgenda()]);
             }).then(() => {
                 const startdate = new Date(this._event.EventDate);
                 return Promise.all([this._loadIntrimDocuments(), this._loadPresenters(), this._loadEventCommittees(startdate.getFullYear())]);
             }).then(() => {
-                console.log("data loaded");
                 tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                 while (this._callbackOnLoaded.length > 0) {
                     const cb = this._callbackOnLoaded.shift();
-                    cb();
+                    cb(undefined);
                 }
                 resolve();
+            }).catch((e)=>{
+                this._onloadError = e;
+                while (this._callbackOnLoaded.length > 0) {
+                    const cb = this._callbackOnLoaded.shift();
+                    cb(e);
+                }
             });
         });
     }

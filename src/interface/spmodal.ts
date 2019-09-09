@@ -106,7 +106,6 @@ export interface ISpAgendaTopic extends IListItem {
 export interface ISpPresenter extends IListItem {
     PresenterName: string;
     OrganizationName: string;
-    Deleted?: boolean;
     SortNumber: number;
 }
 

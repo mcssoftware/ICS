@@ -14,6 +14,7 @@ import AgendaForm from './AgendaForm';
 import MaterialForm from '../MaterialForm/MaterialForm';
 import { findIndex, cloneDeep } from '@microsoft/sp-lodash-subset';
 import { business } from '../../../../business';
+import { Informational, InformationalType } from '../../../../controls/informational';
 
 export default class Agenda extends React.Component<IAgendaProps, IAgendaState> {
 
@@ -32,7 +33,9 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
             selectedAgendaItem: null,
             panelHeaderText: '',
             panelItem: null,
-            waitingMessage: ''
+            waitingMessage: '',
+            message: '',
+            messageType: InformationalType.none
         };
     }
 
@@ -51,15 +54,24 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                         />
                     </div>
                 </div>
-                <DetailsList
-                    key="ListViewControl"
-                    items={agendaItems}
-                    columns={this._getListColumns()}
-                    selectionMode={SelectionMode.single}
-                    selection={this._selection}
-                    layoutMode={DetailsListLayoutMode.justified}
-                    compact={false}
-                    setKey="ListViewControl" />
+                <div className={styles.row}>
+                    <div className={styles["col-12"]}>
+                        <DetailsList
+                            key="ListViewControl"
+                            items={agendaItems}
+                            columns={this._getListColumns()}
+                            selectionMode={SelectionMode.single}
+                            selection={this._selection}
+                            layoutMode={DetailsListLayoutMode.justified}
+                            compact={false}
+                            setKey="ListViewControl" />
+                    </div>
+                </div>
+                <div className={styles.row}>
+                    <div className={styles["col-12"]}>
+                        <Informational message={this.state.message} type={this.state.messageType} />
+                    </div>
+                </div>
                 <Panel
                     isOpen={this.state.showPanel}
                     onDismiss={this._hidePanel}
@@ -90,6 +102,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                             />}
                     </div>
                 </Panel>
+
                 <Waiting message={waitingMessage} />
             </div>
         );
@@ -101,23 +114,28 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
 
     private _onNewAgendaAddedOrEdited = (topic: IComponentAgenda, parentTopicId?: number): void => {
         const agendaCopy = [...this.state.agendaItems];
+        let message = '';
         if (McsUtil.isDefined(parentTopicId)) {
             const agendaIndex = findIndex(agendaCopy, a => a.Id === parentTopicId);
             const subtopicIndex = findIndex(agendaCopy[agendaIndex].SubTopics, topic.Id);
             if (subtopicIndex >= 0) {
                 agendaCopy[agendaIndex].SubTopics[subtopicIndex] = topic;
+                message = 'Subtopic updated';
             } else {
                 agendaCopy[agendaIndex].SubTopics.push(topic);
+                message = 'Subtopic added';
             }
         } else {
             const agendaIndex = findIndex(agendaCopy, a => a.Id === topic.Id);
             if (agendaIndex >= 0) {
                 agendaCopy[agendaIndex] = topic;
+                message = 'Topic updated';
             } else {
+                message = 'Subtopic added';
                 agendaCopy.push(topic);
             }
         }
-        this.setState({ agendaItems: agendaCopy, showPanel: false, waitingMessage: '' });
+        this.setState({ agendaItems: agendaCopy, showPanel: false, waitingMessage: '', message, messageType: InformationalType.Info });
     }
 
     private _onTopicAddButtonClicked = (agenda: IComponentAgenda): void => {
@@ -177,7 +195,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
     private _onMaterialUploaded = (document: ISpEventMaterial, agenda: IComponentAgenda, type: OperationType): void => {
         if (McsUtil.isDefined(document)) {
             const event = business.get_Event();
-            this.setState({waitingMessage: "Attaching document to meeting."});
+            this.setState({ waitingMessage: "Attaching document to meeting." });
             business.edit_Event(event.Id, event["odata.type"],
                 {
                     __metadata: {

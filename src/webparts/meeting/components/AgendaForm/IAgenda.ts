@@ -1,5 +1,6 @@
 import { ISpAgendaTopic, ISpPresenter, ISpEventMaterial, IListItem, ISpEvent } from "../../../../interface/spmodal";
 import { IComponentAgenda } from "../../../../business/transformAgenda";
+import { InformationalType } from "../../../../controls/informational";
 
 export enum AgendaPanelType {
   uploadDocument,
@@ -21,6 +22,8 @@ export interface IAgendaState {
   panelHeaderText: string;
   panelItem: any;
   waitingMessage: string;
+  message: string;
+  messageType: InformationalType;
 }
 
 export interface IAgendaFormProps {

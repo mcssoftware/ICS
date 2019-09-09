@@ -15,17 +15,17 @@ const part: React.SFC<IHeaderPartProps> = (props) => {
             childrenGap: 20
         }
     };
-    return (
-        <div className={styles.waiting}>
-            {typeof props.message === "string" && props.message.length > 0 &&
-                <div className={styles.stackContainer}>
-                    <Stack {...rowProps} tokens={tokens.spinnerStack} className={styles.stack}>
-                        <Label>props.message</Label>
-                        <Spinner size={SpinnerSize.large} />
-                    </Stack>
-                </div>
-            }
-        </div>
+    const isvisible = typeof props.message === "string" && props.message.length > 0;
+    return (<div>
+        {isvisible && <div className={styles.waiting}>
+            <div className={styles.stackContainer}>
+                <Stack {...rowProps} tokens={tokens.spinnerStack} className={styles.stack}>
+                    <Label>{props.message}</Label>
+                    <Spinner size={SpinnerSize.large} />
+                </Stack>
+            </div>
+        </div>}
+    </div>
     );
 };
 
