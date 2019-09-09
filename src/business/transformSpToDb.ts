@@ -122,9 +122,9 @@ const transform = (webAbsoluteUrl: string, event: ISpEvent, agendaList: ISpAgend
             if (agendaModified > lastModifiedDate) {
                 lastModifiedDate = agendaModified;
             }
-            agenda.MeetingPresenters = tranformPresenterList(McsUtil.isDefined(a.PresentersLookupId) ? a.PresentersLookupId.results : [], presenterList);
-            if (McsUtil.isDefined(a.AgendaDocumentsLookupId) && McsUtil.isArray(a.AgendaDocumentsLookupId.results)) {
-                agenda.MeetingDocuments = a.AgendaDocumentsLookupId.results.map((d) => {
+            agenda.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId) ? a.PresentersLookupId : [], presenterList);
+            if (McsUtil.isArray(a.AgendaDocumentsLookupId)) {
+                agenda.MeetingDocuments = a.AgendaDocumentsLookupId.map((d) => {
                     const docIndex = McsUtil.binarySearch(allmaterials, d, 'Id');
                     if (docIndex < 0) {
                         return null;
@@ -150,9 +150,9 @@ const transform = (webAbsoluteUrl: string, event: ISpEvent, agendaList: ISpAgend
                 if (agendaModified > lastModifiedDate) {
                     lastModifiedDate = agendaModified;
                 }
-                subTopic.MeetingPresenters = tranformPresenterList(McsUtil.isDefined(a.PresentersLookupId) ? a.PresentersLookupId.results : [], presenterList);
-                if (McsUtil.isDefined(a.AgendaDocumentsLookupId) && McsUtil.isArray(a.AgendaDocumentsLookupId.results)) {
-                    subTopic.MeetingDocuments = a.AgendaDocumentsLookupId.results.map((d) => {
+                subTopic.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId) ? a.PresentersLookupId : [], presenterList);
+                if (McsUtil.isArray(a.AgendaDocumentsLookupId)) {
+                    subTopic.MeetingDocuments = a.AgendaDocumentsLookupId.map((d) => {
                         const docIndex = McsUtil.binarySearch(allmaterials, d, 'Id');
                         if (docIndex < 0) {
                             return null;

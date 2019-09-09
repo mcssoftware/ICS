@@ -12,7 +12,7 @@ import { Timepicker } from '../../../../controls/timepicker';
 import { business } from '../../../../business';
 import { IComponentAgenda } from '../../../../business/transformAgenda';
 
-const userRemoveIcon: IIconProps = { iconName: 'UserRemove' };
+const userRemoveIcon: IIconProps = { iconName: 'Delete' };
 const editContactIcon: IIconProps = { iconName: 'EditContact' };
 
 
@@ -65,6 +65,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
         const { useTime, agenda, agendaTime, agendaDate, waitingMessage, presenter } = this.state;
         const cansaveAgenda = this._canSaveAgenda(agenda);
         const canSavePresenter = this._canSavePresenter(presenter);
+        const presenter_col_1_Width = '110px';
         return (<div className={css.combine(styles["d-flex"], styles["flex-column"], styles["justify-content-between"])}>
             <div className={styles["mb-3"]}>
                 <div className={styles["container-fluid"]}>
@@ -109,7 +110,12 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                             </div>
                         }
                         <div className={isSubTopic ? styles["col-9"] : styles["col-12"]}>
-                            <TextField label="Title" name="AgendaTitle" multiline rows={3} required onChange={this._onAgendaTextChanged} />
+                            <TextField label="Title" name="AgendaTitle"
+                                value={agenda.AgendaTitle}
+                                multiline
+                                rows={3}
+                                required
+                                onChange={this._onAgendaTextChanged} />
                         </div>
                     </div>
                     <div className={styles.row}>
@@ -132,21 +138,24 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                         <tbody style={{ minWidth: "20px" }}>
                             {McsUtil.isDefined(agenda) && McsUtil.isArray(agenda.Presenters) &&
                                 sortBy(agenda.Presenters, a => a.SortNumber).map((p, index) => {
-                                    return (<tr className={p.Id === presenter.Id ? css.combine(styles["bg-info"], styles["text-white"]) : ''}>
-                                        <td className={css.combine(styles["d-flex"], styles["justify-content-between"])}>
-                                            <div>
+                                    return (<tr className={p.Id === presenter.Id ? css.combine(styles["bg-gray"]) : ''}>
+                                        <td className={css.combine(styles["d-flex"], styles["justify-content-between"])}
+                                            style={{ maxWidth: presenter_col_1_Width }}>
+                                            <div className={css.combine(styles["d-flex"], styles["justify-content-between"])}>
                                                 <IconButton iconProps={userRemoveIcon}
                                                     title="PresenterRemove"
                                                     ariaLabel="PresenterRemove"
-                                                    name={'edit'+index.toString()}
-                                                    onClick={this._onEditPresenterClicked}
+                                                    name={'edit' + index.toString()}
+                                                    className={styles["p-0"]}
+                                                    onClick={() => this._onDeletePresenterClicked(p)}
                                                 />
                                                 <IconButton
                                                     iconProps={editContactIcon}
                                                     title="PresenterEdit"
                                                     ariaLabel="PresenterEdit"
-                                                    name={'delete'+index.toString()}
-                                                    onClick={this._onDeletePresenterClicked} />
+                                                    className={styles["p-0"]}
+                                                    name={'delete' + index.toString()}
+                                                    onClick={() => this._onEditPresenterClicked(p)} />
                                             </div>
                                             <div>{p.SortNumber}</div>
                                         </td>
@@ -159,19 +168,25 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td><TextField name="SortNumber"
+                                <td style={{ maxWidth: presenter_col_1_Width }}><TextField name="SortNumber"
                                     type='number'
                                     data-validation={'\d+'}
-                                    value={presenter.SortNumber.toString()} required onChange={this._onPresenterTextChanged} /></td>
-                                <td><TextField name="PresenterName" value={presenter.PresenterName} required onChange={this._onPresenterTextChanged} /></td>
+                                    value={presenter.SortNumber.toString()}
+                                    required
+                                    onChange={this._onPresenterTextChanged} /></td>
+                                <td><TextField name="PresenterName"
+                                    value={presenter.PresenterName}
+                                    required
+                                    onChange={this._onPresenterTextChanged} /></td>
                                 <td><TextField name="Title" value={presenter.Title} onChange={this._onPresenterTextChanged} /></td>
                                 <td><TextField name="OrganizationName" value={presenter.OrganizationName} onChange={this._onPresenterTextChanged} /></td>
                             </tr>
                             <tr>
                                 <td colSpan={3}>
-                                    <DefaultButton text="Add Presenter"
+                                    <DefaultButton text={(presenter.Id !== 0 ? 'Edit' : 'Add') + ' Presenter'}
                                         disabled={!canSavePresenter}
-                                        className={css.combine(styles["mr-2"], styles["bg-secondary"], styles["text-white"])}
+                                        className={css.combine(styles["mr-2"], styles["bg-gray"])}
+                                        style={canSavePresenter ? {} : { opacity: .4 }}
                                         onClick={this._onSavePresenterClicked} />
                                     <DefaultButton text="Clear Presenter"
                                         className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])}
@@ -187,12 +202,12 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                 <DefaultButton text="Save"
                     className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
                     disabled={!cansaveAgenda}
+                    style={cansaveAgenda ? {} : { opacity: .4 }}
                     onClick={this._onSaveClicked} />
                 <DefaultButton text="Cancel"
                     className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])}
                     onClick={this._dismisModal} />
             </div>
-
             <Waiting message={waitingMessage} />
         </div>
         );
@@ -269,7 +284,8 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
         let newPresenters: ISpPresenter[] = [];
         // find all presenters in props not in state
         this.setState({ waitingMessage: 'Adding or editing agenda.' });
-        const deletedPresenters = this.props.agenda.Presenters.filter(a => findIndex(presenters, p => p.Id === a.Id) < 0);
+        const deletedPresenters = McsUtil.isDefined(this.props.agenda) && McsUtil.isArray(this.props.agenda.Presenters) ?
+            this.props.agenda.Presenters.filter(a => findIndex(presenters, p => p.Id === a.Id) < 0) : [];
         Promise.all([this._addPresenters(presenters.filter(a => a.Id < 1)),
         this._editPresenters(presenters.filter(a => a.Id > 0,
             this._deletePresenters(deletedPresenters)))])
@@ -281,12 +297,13 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                     AgendaNumber: agenda.AgendaNumber,
                     AgendaDate: agenda.AgendaDate,
                     EventLookupId: this.props.eventLookupId,
-                    PresentersLookupId: {
-                        __metadata: {
-                            type: "Collection(Edm.Int32)"
-                        },
-                        results: newPresenters.map(a => a.Id)
-                    },
+                    // PresentersLookupId: {
+                    //     __metadata: {
+                    //         type: "Collection(Edm.Int32)"
+                    //     },
+                    //     results: newPresenters.map(a => a.Id)
+                    // },
+                    PresentersLookupId: newPresenters.map(a => a.Id),
                     ParentTopicId: this.props.isSubTopic ? this.props.parentTopicId : null,
                     // AgendaDocumentsLookupId?: IMultipleLookupField; // we are not updating this on agenda
                     // Presenters?: Array<ISpPresenter>;
@@ -309,17 +326,18 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
             });
     }
 
-    private _onEditPresenterClicked = (ev: any): void => {
-        const target = ev.target as HTMLButtonElement;
-        this.setState({ presenter: this.state.agenda.Presenters[parseInt(target.name.replace(/[a-z]*/i,''))] });
+    private _onEditPresenterClicked = (p: ISpPresenter): void => {
+        this.setState({ presenter: p });
     }
 
-    private _onDeletePresenterClicked = (ev: any): void => {
+    private _onDeletePresenterClicked = (p: ISpPresenter): void => {
         if (confirm("Do you want to remove presenter?")) {
-            const target = ev.target as HTMLButtonElement;
             const { agenda } = this.state;
-            agenda.Presenters.splice(parseInt(target.name.replace(/[a-z]*/i,'')), 1);
-            this.setState({ agenda });
+            const index = findIndex(agenda.Presenters, a => a.Id == p.Id);
+            if (index > -1) {
+                agenda.Presenters.splice(index, 1);
+                this.setState({ agenda });
+            }
         }
     }
 
@@ -333,7 +351,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
         } else {
             const tempPresenter = { ...presenter };
             tempPresenter.Id = -1;
-            agenda.Presenters.push(presenter);
+            agenda.Presenters.push(tempPresenter);
         }
         this.setState({ agenda, presenter: this._getDefaultPresenter(agenda) });
     }

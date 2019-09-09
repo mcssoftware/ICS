@@ -24,8 +24,8 @@ export const tranformAgenda = (agendaList: ISpAgendaTopic[], documents: ISpEvent
             a.SubTopics = [];
             a.Presenters = [];
             a.Documents = [];
-            if (McsUtil.isDefined(a.AgendaDocumentsLookupId) && McsUtil.isArray(a.AgendaDocumentsLookupId.results)) {
-                a.AgendaDocumentsLookupId.results.forEach((id) => {
+            if (McsUtil.isArray(a.AgendaDocumentsLookupId) ) {
+                a.AgendaDocumentsLookupId.forEach((id) => {
                     const index = McsUtil.binarySearch(allDocuments, id, 'Id');
                     if (index >= 0) {
                         a.Documents.push(allDocuments[index]);
@@ -33,8 +33,8 @@ export const tranformAgenda = (agendaList: ISpAgendaTopic[], documents: ISpEvent
                     }
                 });
             }
-            if (McsUtil.isDefined(a.PresentersLookupId) && McsUtil.isArray(a.PresentersLookupId.results)) {
-                a.PresentersLookupId.results.forEach((id) => {
+            if (McsUtil.isArray(a.PresentersLookupId) ) {
+                a.PresentersLookupId.forEach((id) => {
                     const index = McsUtil.binarySearch(presenters, id, 'Id');
                     if (index >= 0) {
                         a.Presenters.push(presenters[index]);

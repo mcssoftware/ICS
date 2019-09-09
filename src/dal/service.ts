@@ -43,8 +43,8 @@ class Service {
                     if (agendaList.length > 0) {
                         let presenterIds: number[] = [];
                         agendaList.forEach((e) => {
-                            if (McsUtil.isDefined(e.PresentersLookupId) && McsUtil.isArray(e.PresentersLookupId.results) && e.PresentersLookupId.results.length) {
-                                presenterIds = presenterIds.concat(e.PresentersLookupId.results);
+                            if (McsUtil.isArray(e.PresentersLookupId) && e.PresentersLookupId.length) {
+                                presenterIds = presenterIds.concat(e.PresentersLookupId);
                             }
                         });
                         if (presenterIds.length > 0) {
@@ -59,8 +59,8 @@ class Service {
                     if (McsUtil.isArray(presenters) && presenters.length > 0) {
                         agendaList.forEach(a => {
                             a.Presenters = [];
-                            if (McsUtil.isArray(a.PresentersLookupId) && McsUtil.isArray(a.PresentersLookupId.results) && a.PresentersLookupId.results.length > 0) {
-                                a.PresentersLookupId.results.forEach(p => {
+                            if (McsUtil.isArray(a.PresentersLookupId) && a.PresentersLookupId.length > 0) {
+                                a.PresentersLookupId.forEach(p => {
                                     const index = McsUtil.binarySearch(presenters, p, 'Id');
                                     if (index > -1) {
                                         a.Presenters.push(presenters[index]);
@@ -103,8 +103,8 @@ class Service {
     public getMaterials(event: ISpEvent): Promise<ISpEventMaterial[]> {
         return new Promise((resolve, reject) => {
             if (McsUtil.isDefined(event) && McsUtil.isDefined(event.EventDocumentsLookupId)
-                && McsUtil.isDefined(event.EventDocumentsLookupId.results) && event.EventDocumentsLookupId.results.length > 0) {
-                Promise.all(McsUtil.chunkArray(event.EventDocumentsLookupId.results, 30).map((d) => {
+                && McsUtil.isArray(event.EventDocumentsLookupId) && event.EventDocumentsLookupId.length > 0) {
+                Promise.all(McsUtil.chunkArray(event.EventDocumentsLookupId, 30).map((d) => {
                     const filter = d.map((id) => `Id eq ${id}`).join(' or ');
                     return this._meetingMaterialService.getListItems(filter);
                 })).then((responses) => {
@@ -137,7 +137,7 @@ class Service {
                     if (service === null) {
                         return Promise.resolve(result);
                     } else {
-                        service.getListItemById(result.Id);
+                        return service.getListItemById(result.Id);
                     }
                 }).then((newitem) => {
                     resolve(newitem);
@@ -154,7 +154,7 @@ class Service {
                     if (service === null) {
                         return Promise.resolve(propertiesToUpdate);
                     } else {
-                        service.getListItemById(id);
+                        return service.getListItemById(id);
                     }
                 }).then((newitem) => {
                     resolve(newitem);

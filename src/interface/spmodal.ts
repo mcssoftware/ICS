@@ -63,10 +63,10 @@ export interface IItemVersion extends IListItem {
 export interface IDocumentItem extends IListItem {
     File?: IFile;
 }
-export interface IMultipleLookupField {
-    __metadata: any;
-    results: number[];
-}
+// export interface IMultipleLookupField {
+//     __metadata: any;
+//     results: number[];
+// }
 export interface ISpEvent extends IListItem {
     EventDate: string;
     MeetingStartTime: string;
@@ -84,7 +84,7 @@ export interface ISpEvent extends IListItem {
     CommitteeStaff: string;
     ConferenceNumber: string;
     ApprovedStatus: string;
-    EventDocumentsLookupId?: IMultipleLookupField;
+    EventDocumentsLookupId?: number[];
     JointEventCommitteeId?: string;
     CommitteeLookupId?: number;
     CommitteeEventLookupId?: number;
@@ -96,9 +96,9 @@ export interface ISpAgendaTopic extends IListItem {
     AgendaNumber: number;
     AgendaDate: Date | string;
     EventLookupId: number;
-    PresentersLookupId?: IMultipleLookupField;
+    PresentersLookupId?: number[];
     ParentTopicId: number;
-    AgendaDocumentsLookupId?: IMultipleLookupField;
+    AgendaDocumentsLookupId?: number[];
     Presenters?: Array<ISpPresenter>;
     AllowPublicComments: boolean;
 }

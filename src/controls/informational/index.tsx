@@ -13,14 +13,13 @@ export interface IInformationalProps {
 }
 
 const part: React.SFC<IInformationalProps> = (props) => {
-    let messageBarType = MessageBarType.info;
+    let messageBarType = MessageBarType.success;
     if (props.type === InformationalType.Error) {
-        messageBarType = MessageBarType.error;
+        messageBarType = MessageBarType.severeWarning;
     }
-    return (
-        <MessageBar messageBarType={messageBarType} isMultiline={true} hidden={props.type === InformationalType.none}>{props.message}
-        </MessageBar>
-    );
+    return (<div style={{ paddingTop: '10px' }}>
+        {props.type !== InformationalType.none && <MessageBar messageBarType={messageBarType} isMultiline={true} >{props.message}</MessageBar>}
+    </div>);
 };
 
 export { part as Informational };

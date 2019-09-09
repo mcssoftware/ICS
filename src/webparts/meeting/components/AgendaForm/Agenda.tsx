@@ -201,7 +201,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                     __metadata: {
                         type: "Collection(Edm.Int32)"
                     },
-                    results: this._getDocumentLookupIds((McsUtil.isDefined(event.EventDocumentsLookupId) ? event.EventDocumentsLookupId.results : []), document.Id, type)
+                    results: this._getDocumentLookupIds((McsUtil.isArray(event.EventDocumentsLookupId) ? event.EventDocumentsLookupId: []), document.Id, type)
                 }).then((e) => {
                     if (McsUtil.isDefined(agenda)) {
                         business.edit_Agenda(agenda.Id, agenda["odata.type"],
@@ -209,7 +209,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                                 __metadata: {
                                     type: "Collection(Edm.Int32)"
                                 },
-                                results: this._getDocumentLookupIds((McsUtil.isDefined(agenda.AgendaDocumentsLookupId) ? agenda.AgendaDocumentsLookupId.results : []), document.Id, type)
+                                results: this._getDocumentLookupIds((McsUtil.isArray(agenda.AgendaDocumentsLookupId) ? agenda.AgendaDocumentsLookupId : []), document.Id, type)
                             }).then((updatedAgenda: IComponentAgenda) => {
                                 updatedAgenda.SubTopics = [...agenda.SubTopics];
                                 updatedAgenda.Presenters = [...agenda.Presenters];

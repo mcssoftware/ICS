@@ -389,8 +389,8 @@ class BusinessLogic {
             if (this._eventId > 0 && McsUtil.isArray(this._agendaList) && this._agendaList.length > 0) {
                 const presentersId: number[] = [];
                 this._agendaList.forEach((tempAgenda) => {
-                    if (McsUtil.isDefined(tempAgenda.PresentersLookupId) && McsUtil.isArray(tempAgenda.PresentersLookupId.results)) {
-                        presentersId.push(...tempAgenda.PresentersLookupId.results);
+                    if (McsUtil.isArray(tempAgenda.PresentersLookupId)) {
+                        presentersId.push(...tempAgenda.PresentersLookupId);
                     }
                 });
 
