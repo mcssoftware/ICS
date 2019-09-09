@@ -1,15 +1,14 @@
 import * as React from 'react';
 import styles from './Meeting.module.scss';
 import { IMeetingProps, IMeetingState } from './IMeeting';
-import { ChoiceGroup, IChoiceGroupOption, autobind, DefaultButton } from 'office-ui-fabric-react';
-import { Header, EnumTextAlign } from '../../../controls/header';
-import { Loading } from '../../../controls/loading';
+import { DefaultButton } from 'office-ui-fabric-react';
 import Event from './EventForm/Event';
 import Agenda from './AgendaForm/Agenda';
 import css from '../../../utility/css';
 import { business } from '../../../business';
 import { McsUtil } from '../../../utility/helper';
 import { MaterialForm } from './MaterialForm/Material';
+import { Waiting } from '../../../controls/waiting';
 
 export default class Meeting extends React.Component<IMeetingProps, IMeetingState> {
 
@@ -28,7 +27,6 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
   public render(): React.ReactElement<IMeetingProps> {
     const { isLoaded, selectedTab, isNewEvent } = this.state;
     const event = business.get_Event();
-    // let isNewEvent = true;
     let minDate: Date = undefined;
     let maxDate: Date = undefined;
 
@@ -49,7 +47,7 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
         </div>
         <div className={styles.row}>
           <div className={styles["col-12"]}>
-            {!isLoaded && <Loading />}
+            {!isLoaded && <Waiting message={'Loading event'} />}
             {isLoaded && selectedTab === 'Event' &&
               <Event event={event}
                 committees={business.get_Committee()}
