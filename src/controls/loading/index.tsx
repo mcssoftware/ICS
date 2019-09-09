@@ -1,15 +1,15 @@
-import * as React from 'react';
-import { Spinner } from 'office-ui-fabric-react';
+// import * as React from 'react';
+// import { Spinner } from 'office-ui-fabric-react';
 
-export interface IHeaderPartProps {
-}
-const part: React.SFC<IHeaderPartProps> = (props) => {
+// export interface IHeaderPartProps {
+// }
+// const part: React.SFC<IHeaderPartProps> = (props) => {
 
-    return (
-        <div>
-            <Spinner label={"Loading options..."} />
-        </div>
-    );
-};
+//     return (
+//         <div>
+//             <Spinner label={"Loading options..."} />
+//         </div>
+//     );
+// };
 
-export { part as Loading };
+// export { part as Loading };

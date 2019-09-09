@@ -1,12 +1,14 @@
 import * as React from 'react';
 import { IMaterialFormProp, IMaterialFormState, DocumentUploadType } from './IMaterialForm';
 import { TextField, Dropdown, IDropdownOption, Checkbox, DefaultButton, Label } from "office-ui-fabric-react";
+import { Waiting } from '../../../../controls/waiting';
 import styles from '../Meeting.module.scss';
 import css from '../../../../utility/css';
 import { McsUtil } from '../../../../utility/helper';
 import AsyncSelect from 'react-select/async';
 import { cloneDeep } from '@microsoft/sp-lodash-subset';
 import { business } from '../../../../business';
+import { ISpEventMaterial, OperationType } from '../../../../interface/spmodal';
 
 export default class MaterialForm extends React.Component<IMaterialFormProp, IMaterialFormState> {
 
@@ -25,19 +27,27 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     billVersion: '',
                     lsonumber: '',
                     sessionDocumentId: 0,
-                    uploadFile: null
+                    uploadFile: null,
+                    sortNumber: props.document.SortNumber,
+                    lsoDocumentType: props.document.lsoDocumentType,
                 } : this._getFormDefaultValue()
         };
     }
 
     public render(): React.ReactElement<IMaterialFormProp> {
-        const { selectedSubTopic, agenda, documentUploadType, workingDocument, documentId } = this.state;
+        const { selectedSubTopic, agenda, documentUploadType, workingDocument, documentId, waitingMessage } = this.state;
         const marginClassName = css.combine(styles["ml-2"], styles["mr-2"]);
         const selectTopic = this.props.requireAgendaSelection && !McsUtil.isDefined(this.state.agenda);
         return (<div className={styles["container-fluid"]}>
             <div className={styles.row}>
                 <div className={styles["col-2"]}>
-                    <TextField label="Order #" name="SortNumber" className={marginClassName} />
+                    <TextField label="Order #"
+                        name="sortNumber"
+                        className={marginClassName}
+                        onGetErrorMessage={(value) => /\d+/.test(value) ? undefined : 'Must be numberic'}
+                        value={workingDocument.sortNumber}
+                        onChange={this._onTextFieldChanged}
+                    />
                 </div>
                 {selectTopic && <div className={styles["col-5"]}>
                     <Dropdown
@@ -125,7 +135,8 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     <div className={css.combine(styles.row, styles["mt-2"])}>
                         <div className={styles["col-6"]}>
                             <DefaultButton text={documentId === 0 ? "Upload Document" : "Update Document"}
-                                disabled={!this._canUploadDocument()} />
+                                disabled={!this._canUploadDocument()}
+                                onClick={this._uploadFileToSp} />
                         </div>
                     </div>
                 </div>
@@ -181,7 +192,14 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     </div>
                 </div>
             }
+            <Waiting message={waitingMessage} />
         </div>);
+    }
+
+    private _onTextFieldChanged = (event: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, value: string) => {
+        const { workingDocument } = this.state;
+        workingDocument[(event.target as HTMLInputElement).name] = value;
+        this.setState({ workingDocument });
     }
 
     private _onTopicSelected = (event: any, option?: IDropdownOption) => {
@@ -226,7 +244,8 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
     }
 
     private _canUploadDocument = (): boolean => {
-        if (McsUtil.isString(this.state.workingDocument.title) && McsUtil.isString(this.state.workingDocument.agency)) {
+        const { workingDocument } = this.state;
+        if (McsUtil.isString(workingDocument.title) && McsUtil.isString(workingDocument.sortNumber) && McsUtil.isString(workingDocument.agency)) {
             if (this.state.documentId === 0) {
                 return this.state.workingDocument.uploadFile !== null;
             }
@@ -289,6 +308,35 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
     }
 
     private _getFormDefaultValue = (): any => {
-        return { agency: '', title: '', billVersion: '', lsonumber: '', sessionDocumentId: 0, uploadFile: null, selectedAgency: null };
+        return {
+            agency: '',
+            title: '',
+            billVersion: '',
+            lsonumber: '',
+            sessionDocumentId: 0,
+            uploadFile: null,
+            selectedAgency: null,
+            sortNumber: this.props.sortNumber,
+            lsoDocumentType: 'Meeting Attachments',
+        };
+    }
+
+    private _uploadFileToSp = (): void => {
+        const { workingDocument, agenda } = this.state;
+        const uploadProperties: ISpEventMaterial = {
+            lsoDocumentType: workingDocument.lsoDocumentType,
+            AgencyName: workingDocument.selectedAgency,
+            Title: workingDocument.title,
+            IncludeWithAgenda: workingDocument.includeWithAgenda,
+            SortNumber: McsUtil.isUnsignedInt(workingDocument.sortNumber) ? parseInt(workingDocument.sortNumber) : 1,
+        };
+        const file: File = workingDocument.uploadFile.item[0];
+        this.setState({waitingMessage: "Uploading file"});
+        business.upLoad_Document(`Material for ${this.props.meetingId}`, file.name, uploadProperties, file)
+            .then((value: ISpEventMaterial) => {
+                this.setState({waitingMessage: ""});
+                this.props.onChange(value, agenda, OperationType.Add);
+                //(document: ISpEventMaterial, agenda: IComponentAgenda, type: OperationType)
+            });
     }
 }

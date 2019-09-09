@@ -4,15 +4,16 @@ import { IAgendaProps, IAgendaState, AgendaPanelType } from './IAgenda';
 import css from '../../../../utility/css';
 import { CommandBar, SelectionMode, Selection, DetailsList, DetailsListLayoutMode, IColumn, Panel, PanelType } from 'office-ui-fabric-react';
 import { IComponentAgenda, get_tranformAgenda } from "../../../../business/transformAgenda";
-// import tranformAgenda from './tranformAgenda';
+import { Waiting } from '../../../../controls/waiting';
 // import { ListView, IViewField, SelectionMode, GroupOrder, IGrouping } from "@pnp/spfx-controls-react/lib/ListView";
 import { McsUtil } from '../../../../utility/helper';
 import { TopicDisplay } from './TopicDisplay';
 import { MaterialDisplay } from './MaterialDisplay';
-import { ISpEventMaterial } from '../../../../interface/spmodal';
+import { ISpEventMaterial, OperationType } from '../../../../interface/spmodal';
 import AgendaForm from './AgendaForm';
 import MaterialForm from '../MaterialForm/MaterialForm';
-import { findIndex } from '@microsoft/sp-lodash-subset';
+import { findIndex, cloneDeep } from '@microsoft/sp-lodash-subset';
+import { business } from '../../../../business';
 
 export default class Agenda extends React.Component<IAgendaProps, IAgendaState> {
 
@@ -30,12 +31,13 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
             showPanel: false,
             selectedAgendaItem: null,
             panelHeaderText: '',
-            panelItem: null
+            panelItem: null,
+            waitingMessage: ''
         };
     }
 
     public render(): React.ReactElement<IAgendaProps> {
-        const { agendaItems, panelHeaderText, panelType, panelItem, selectedAgendaItem } = this.state;
+        const { agendaItems, panelHeaderText, panelType, panelItem, selectedAgendaItem, waitingMessage } = this.state;
         const agendaSelected = McsUtil.isDefined(selectedAgendaItem);
         return (
             <div className={styles["container-fluid"]}>
@@ -79,9 +81,16 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                             />
                         }
                         {panelType == AgendaPanelType.uploadDocument &&
-                            <MaterialForm requireAgendaSelection={false} document={panelItem} agenda={[selectedAgendaItem]} />}
+                            <MaterialForm requireAgendaSelection={false}
+                                meetingId={this.props.eventLookupId}
+                                document={panelItem}
+                                agenda={[selectedAgendaItem]}
+                                sortNumber={selectedAgendaItem.Documents.length > 0 ? selectedAgendaItem.Documents[selectedAgendaItem.Documents.length - 1].SortNumber : 1}
+                                onChange={this._onMaterialUploaded}
+                            />}
                     </div>
                 </Panel>
+                <Waiting message={waitingMessage} />
             </div>
         );
     }
@@ -108,7 +117,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 agendaCopy.push(topic);
             }
         }
-        this.setState({ agendaItems: agendaCopy, showPanel: false });
+        this.setState({ agendaItems: agendaCopy, showPanel: false, waitingMessage: '' });
     }
 
     private _onTopicAddButtonClicked = (agenda: IComponentAgenda): void => {
@@ -158,6 +167,76 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 selectedAgendaItem: agenda
             });
         }
+    }
+
+    /**
+     * on material has been uploaded.
+     * @private
+     * @memberof Agenda
+     */
+    private _onMaterialUploaded = (document: ISpEventMaterial, agenda: IComponentAgenda, type: OperationType): void => {
+        if (McsUtil.isDefined(document)) {
+            const event = business.get_Event();
+            this.setState({waitingMessage: "Attaching document to meeting."});
+            business.edit_Event(event.Id, event["odata.type"],
+                {
+                    __metadata: {
+                        type: "Collection(Edm.Int32)"
+                    },
+                    results: this._getDocumentLookupIds((McsUtil.isDefined(event.EventDocumentsLookupId) ? event.EventDocumentsLookupId.results : []), document.Id, type)
+                }).then((e) => {
+                    if (McsUtil.isDefined(agenda)) {
+                        business.edit_Agenda(agenda.Id, agenda["odata.type"],
+                            {
+                                __metadata: {
+                                    type: "Collection(Edm.Int32)"
+                                },
+                                results: this._getDocumentLookupIds((McsUtil.isDefined(agenda.AgendaDocumentsLookupId) ? agenda.AgendaDocumentsLookupId.results : []), document.Id, type)
+                            }).then((updatedAgenda: IComponentAgenda) => {
+                                updatedAgenda.SubTopics = [...agenda.SubTopics];
+                                updatedAgenda.Presenters = [...agenda.Presenters];
+                                updatedAgenda.Documents = [...agenda.Documents];
+
+                                if (type === OperationType.Delete || type === OperationType.Edit) {
+                                    const index = findIndex(updatedAgenda.Documents, a => a.Id == document.Id);
+                                    if (index > -1) {
+                                        if (type === OperationType.Edit) {
+                                            updatedAgenda.Documents[index] = document;
+                                        } else {
+                                            updatedAgenda.Documents.splice(index, 1);
+                                        }
+                                    }
+                                } else {
+                                    updatedAgenda.Documents.push(document);
+                                }
+                                const tempAgenda = cloneDeep(this.state.agendaItems);
+                                let found = false;
+                                for (let i = 0; i < tempAgenda.length && !found; i++) {
+                                    if (tempAgenda[i].Id === agenda.Id) {
+                                        tempAgenda[i] = agenda;
+                                        found = true;
+                                        break;
+                                    }
+                                    for (let j = 0; j < tempAgenda[i].SubTopics.length && !found; j++) {
+                                        if (tempAgenda[i].SubTopics[j].Id == agenda.Id) {
+                                            tempAgenda[i].SubTopics[j] = agenda;
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                this.setState({ agendaItems: tempAgenda });
+                            }).catch(() => { });
+                    } else {
+                        return Promise.resolve(null);
+                    }
+                }).then();
+            // need to update event object as well.
+            this.setState({ showPanel: false, waitingMessage: '' });
+        } else {
+            this.setState({ showPanel: false, waitingMessage: '' });
+        }
+
     }
 
     private _setSelectedAgenda = (): void => {
@@ -272,5 +351,19 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 }
             }
         ];
+    }
+
+    private _getDocumentLookupIds = (oldDocIds: number[], docId: number, type: OperationType): number[] => {
+        const documentLookupIds: number[] = McsUtil.isArray(oldDocIds) ? oldDocIds : [];
+        if (type === OperationType.Add) {
+            documentLookupIds.push(docId);
+        }
+        if (type === OperationType.Delete) {
+            const docIndex = findIndex(documentLookupIds, a => a == docId);
+            if (docIndex > -1) {
+                documentLookupIds.splice(docIndex, 1);
+            }
+        }
+        return documentLookupIds;
     }
 }

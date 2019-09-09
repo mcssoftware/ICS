@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { IAgendaFormProps, IAgendaFormState } from './IAgenda';
-import { DateTimePicker, DateConvention, TimeConvention } from '@pnp/spfx-controls-react/lib/dateTimePicker';
 import styles from '../Meeting.module.scss';
 import { Checkbox, TextField, DefaultButton, IconButton, IIconProps, DatePicker, DayOfWeek } from 'office-ui-fabric-react';
+import { Waiting } from '../../../../controls/waiting';
 import css from '../../../../utility/css';
 import { McsUtil } from '../../../../utility/helper';
 import { sortBy, cloneDeep, findIndex } from "@microsoft/sp-lodash-subset";
@@ -56,13 +56,13 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
             useTime,
             presenter: this._getDefaultPresenter(),
             agendaTime,
+            waitingMessage: ''
         };
     }
 
     public render(): React.ReactElement<IAgendaFormProps> {
         const { isSubTopic } = this.props;
-        const { useTime, agenda, agendaTime, agendaDate } = this.state;
-        var dt = this.state;
+        const { useTime, agenda, agendaTime, agendaDate, waitingMessage } = this.state;
         return (<div className={css.combine(styles["d-flex"], styles["flex-column"], styles["justify-content-between"])}>
             <div className={styles["mb-3"]}>
                 <div className={styles["container-fluid"]}>
@@ -158,6 +158,8 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                 <DefaultButton text="Save" className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])} onClick={this._onSaveClicked} />
                 <DefaultButton text="Cancel" className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])} onClick={this._dismisModal} />
             </div>
+
+            <Waiting message={waitingMessage} />
         </div>
         );
     }
@@ -178,6 +180,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
         const presenters = agenda.Presenters;
         let newPresenters: ISpPresenter[] = [];
         // find all presenters in props not in state
+        this.setState({waitingMessage: 'Adding or editing agenda.'});
         const deletedPresenters = this.props.agenda.Presenters.filter(a => findIndex(presenters, p => p.Id === a.Id) < 0);
         Promise.all([this._addPresenters(presenters.filter(a => a.Id == 0)),
         this._editPresenters(presenters.filter(a => a.Id > 0,
@@ -211,7 +214,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                     } else {
                         result.SubTopics = [...agenda.SubTopics];
                     }
-                    this.setState({ agenda: result });
+                    this.setState({ agenda: result, waitingMessage: '' });
                     this.props.onChange(agenda);
                 });
 

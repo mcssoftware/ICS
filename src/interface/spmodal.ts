@@ -64,7 +64,7 @@ export interface IDocumentItem extends IListItem {
     File?: IFile;
 }
 export interface IMultipleLookupField {
-    __metadata: any,
+    __metadata: any;
     results: number[];
 }
 export interface ISpEvent extends IListItem {
@@ -131,4 +131,10 @@ export interface ISpCommitteeLink extends IListItem {
     CommitteeName: string;
     DisplayOrder: string;
     CommitteeDesktopUrl: string;
+}
+
+export enum OperationType {
+    Add = 1,
+    Edit,
+    Delete
 }

@@ -13,4 +13,5 @@ export interface IEventState {
   endDate?: Date;
   selectedState: any;
   isDirty: boolean;
+  waitingMessage: string;
 }

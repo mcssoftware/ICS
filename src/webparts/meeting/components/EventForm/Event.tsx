@@ -10,7 +10,7 @@ import { Timepicker } from '../../../../controls/timepicker';
 import { McsUtil } from '../../../../utility/helper';
 import { ISpEvent } from '../../../../interface/spmodal';
 import { business } from '../../../../business';
-import { SPEvent } from '@microsoft/sp-core-library';
+import { Waiting } from '../../../../controls/waiting';
 
 export default class Event extends React.Component<IEventProps, IEventState> {
 
@@ -26,11 +26,12 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             endDate,
             selectedState: findStateOption(props.event.WorkState),
             isDirty: false,
+            waitingMessage: 'test message'
         };
     }
 
     public render(): React.ReactElement<IEventProps> {
-        const { event, startDate, endDate, selectedState } = this.state;
+        const { event, startDate, endDate, selectedState, waitingMessage } = this.state;
         const marginClassName = css.combine(styles["ml-2"], styles["mr-2"]);
         let minStartDate: Date;
         let maxStartDate: Date;
@@ -181,6 +182,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                         <PrimaryButton text="Add committees to this meeting" />
                     </div>
                 </div>
+                <Waiting message={waitingMessage} />
             </div>
         );
     }
@@ -256,12 +258,14 @@ export default class Event extends React.Component<IEventProps, IEventState> {
         };
         let promise: Promise<ISpEvent>;
         if (event.Id > 0) {
+            this.setState({waitingMessage: 'Editing meeting'});
             promise = business.edit_Event(event.Id, event["odata.type"], propertiesToUpdate);
         } else {
+            this.setState({waitingMessage: 'Adding meeting'});
             promise = business.add_Event(propertiesToUpdate);
         }
         promise.then((newevent) => {
-            this.setState({ event: newevent });
+            this.setState({ event: newevent, waitingMessage: '' });
             this.props.onChange();
         }).catch(() => { });
     }

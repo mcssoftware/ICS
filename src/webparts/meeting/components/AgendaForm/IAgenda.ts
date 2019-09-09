@@ -1,4 +1,4 @@
-import { ISpAgendaTopic, ISpPresenter, ISpEventMaterial, IListItem } from "../../../../interface/spmodal";
+import { ISpAgendaTopic, ISpPresenter, ISpEventMaterial, IListItem, ISpEvent } from "../../../../interface/spmodal";
 import { IComponentAgenda } from "../../../../business/transformAgenda";
 
 export enum AgendaPanelType {
@@ -20,6 +20,7 @@ export interface IAgendaState {
   panelType?: AgendaPanelType;
   panelHeaderText: string;
   panelItem: any;
+  waitingMessage: string;
 }
 
 export interface IAgendaFormProps {
@@ -40,4 +41,5 @@ export interface IAgendaFormState {
   agendaDate: Date;
   presenter: ISpPresenter;
   agendaTime: string;
+  waitingMessage: string;
 }

@@ -1,4 +1,4 @@
-import { ISpEventMaterial } from "../../../../interface/spmodal";
+import { ISpEventMaterial, OperationType } from "../../../../interface/spmodal";
 import { IComponentAgenda } from "../../../../business/transformAgenda";
 
 export enum DocumentUploadType {
@@ -8,12 +8,16 @@ export enum DocumentUploadType {
 }
 
 export interface IMaterialFormProp {
+    meetingId: number;
     document: ISpEventMaterial;
     agenda: IComponentAgenda[];
     requireAgendaSelection?: boolean;
+    sortNumber: number;
+    onChange: (document: ISpEventMaterial, agenda: IComponentAgenda, type: OperationType) => void;
 }
 
 export interface IWorkingDocument {
+    sortNumber: string;
     title: string;
     agency: string;
     lsonumber: string;
@@ -22,6 +26,7 @@ export interface IWorkingDocument {
     uploadFile?: FileList;
     includeWithAgenda: boolean;
     selectedAgency: any;
+    lsoDocumentType: string;
 }
 
 export interface IMaterialFormState {
@@ -30,4 +35,5 @@ export interface IMaterialFormState {
     documentUploadType: DocumentUploadType;
     workingDocument: IWorkingDocument;
     documentId: number;
+    waitingMessage?: string;
 }
