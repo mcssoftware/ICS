@@ -20,7 +20,7 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
       isNewEvent: true,
       message: 'Loading'
     };
-    business.onLoaded((error: any) => {
+    business.on_Loaded((error: any) => {
       if (!McsUtil.isDefined(error)) {
         this._onDataLoaded();
       } else {
@@ -87,13 +87,13 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
   }
 
   private _eventAddedOrUpdated = (): void => {
-    const event = business.get_Event();
-    if (this.state.isNewEvent) {
-      if (event.Id > 0) {
-        const startdate = new Date(event.EventDate);
-        business.ensure_Folders(startdate.getFullYear(), event.Id);
-      }
-    }
+    // const event = business.get_Event();
+    // if (this.state.isNewEvent) {
+    //   if (event.Id > 0) {
+    //     const startdate = new Date(event.EventDate);
+    //     business.ensure_Folders(startdate.getFullYear(), event.Id);
+    //   }
+    // }
     // to ensure component is refreshed.
     this.setState({ isLoaded: true });
   }

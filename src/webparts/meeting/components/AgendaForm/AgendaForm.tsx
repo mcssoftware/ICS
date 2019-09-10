@@ -291,19 +291,19 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
             this._deletePresenters(deletedPresenters)))])
             .then((responses) => {
                 newPresenters = sortBy(responses[0].concat(responses[1]), a => a.SortNumber);
-                const agendaPropertiesToUpdate: ISpAgendaTopic = {
+                const agendaPropertiesToUpdate = {
                     Title: agenda.AgendaTitle.length > 20 ? (agenda.AgendaTitle.substr(0, 20) + '...') : agenda.AgendaTitle,
                     AgendaTitle: agenda.AgendaTitle,
                     AgendaNumber: agenda.AgendaNumber,
                     AgendaDate: agenda.AgendaDate,
                     EventLookupId: this.props.eventLookupId,
-                    // PresentersLookupId: {
-                    //     __metadata: {
-                    //         type: "Collection(Edm.Int32)"
-                    //     },
-                    //     results: newPresenters.map(a => a.Id)
-                    // },
-                    PresentersLookupId: newPresenters.map(a => a.Id),
+                    PresentersLookupId: {
+                        __metadata: {
+                            type: "Collection(Edm.Int32)"
+                        },
+                        results: newPresenters.map(a => a.Id)
+                    },
+                    // PresentersLookupId: newPresenters.map(a => a.Id),
                     ParentTopicId: this.props.isSubTopic ? this.props.parentTopicId : null,
                     // AgendaDocumentsLookupId?: IMultipleLookupField; // we are not updating this on agenda
                     // Presenters?: Array<ISpPresenter>;

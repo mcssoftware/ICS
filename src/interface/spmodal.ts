@@ -63,10 +63,10 @@ export interface IItemVersion extends IListItem {
 export interface IDocumentItem extends IListItem {
     File?: IFile;
 }
-// export interface IMultipleLookupField {
-//     __metadata: any;
-//     results: number[];
-// }
+export interface IMultipleLookupField {
+    __metadata: any;
+    results: number[];
+}
 export interface ISpEvent extends IListItem {
     EventDate: string;
     MeetingStartTime: string;

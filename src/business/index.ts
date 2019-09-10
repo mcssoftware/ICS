@@ -48,7 +48,6 @@ class BusinessLogic {
     public setup(config: any): void {
         this._config = config;
         service.initialize();
-        service.get_MaterialService().setListTitle(this.isSessionMeeting() ? 'Session Document' : Mcs.WebConstants.meetingMaterialListId);
         this._initialize();
     }
 
@@ -57,7 +56,7 @@ class BusinessLogic {
      * @param {() => void} callback
      * @memberof BusinessLogic
      */
-    public onLoaded(callback: (reject: any) => void): void {
+    public on_Loaded(callback: (reject: any) => void): void {
         if (McsUtil.isDefined(this._event)) {
             callback(this._onloadError);
         } else {
@@ -118,6 +117,7 @@ class BusinessLogic {
                     const startdate = new Date(this._event.EventDate);
                     return this._loadEventCommittees(startdate.getFullYear());
                 }).then(() => {
+                    service.setIsSession(this.is_SessionMeeting());
                     resolve();
                 }).catch(e => reject(e));
         });
@@ -127,6 +127,9 @@ class BusinessLogic {
         return new Promise((resolve, reject) => {
             service.editItemSpList(Mcs.WebConstants.committeeCalendarListId, false, id, listItemEntityTypeFullName, propertiesToUpdate)
                 .then((newevent: any) => {
+                    if (this._event.IsBudgetHearing !== newevent.IsBudgetHearing) {
+                        service.setIsSession(this.is_SessionMeeting());
+                    }
                     const oldjcc = JSON.stringify(this._event.JointEventCommitteeId);
                     this._event = { ...this._event, };
                     if (oldjcc !== JSON.stringify(newevent.JointEventCommitteeId)) {
@@ -141,7 +144,7 @@ class BusinessLogic {
         });
     }
 
-    public add_Agenda(properties: ISpAgendaTopic): Promise<ISpAgendaTopic> {
+    public add_Agenda(properties: any): Promise<ISpAgendaTopic> {
         return new Promise((resolve, reject) => {
             service.addItemToSpList(Mcs.WebConstants.agendaListId, false, properties)
                 .then((newagenda: ISpAgendaTopic) => {
@@ -222,28 +225,6 @@ class BusinessLogic {
     }
 
     /**
-     * Ensure folders are created for Intrim Documents Library
-     * @param {number} meetingYear
-     * @param {number} meetingId
-     * @returns {Promise<any>}
-     * @memberof BusinessLogic
-     */
-    public ensure_Folders(meetingYear: number, meetingId: number): Promise<any> {
-        const folderStructure = this._getFolderStructure(meetingYear, meetingId);
-        return new Promise((resolve, reject) => {
-            service.folderCreation(folderStructure)
-                .then((e) => {
-                    this._documentFolderStructure = e;
-                    resolve(e);
-                })
-                .catch((e) => {
-                    this._documentFolderStructure = folderStructure;
-                    reject(e);
-                });
-        });
-    }
-
-    /**
      * Upload document to meeting folder in Intrim Document library
      *
      * @param {string} fileName
@@ -254,12 +235,18 @@ class BusinessLogic {
      */
     public upLoad_Document(folderName: string, fileName: string, propertiesToUpdate: IDocumentItem, blob: Blob): Promise<IDocumentItem> {
         return new Promise((resolve, reject) => {
+            let ensureFolderCreation = Promise.resolve({});
             const folderRelativeUrl = this._findServerRelativeUrl(folderName, this._documentFolderStructure);
-            service.get_MaterialService().addOrUpdateDocument(folderRelativeUrl, fileName, propertiesToUpdate, blob)
-                .then((newdocument: ISpEventMaterial) => {
-                    this._documentList.push(newdocument);
-                    resolve(newdocument);
-                }).catch((e) => reject(e));
+            if (this._documentList.length === 0) {
+                const startdate = new Date(this._event.EventDate);
+                ensureFolderCreation = this._ensure_Folders(startdate.getFullYear(), this._event.Id);
+            }
+            ensureFolderCreation.then(() => {
+                return service.get_MaterialService().addOrUpdateDocument(folderRelativeUrl, fileName, propertiesToUpdate, blob);
+            }).then((newdocument: ISpEventMaterial) => {
+                this._documentList.push(newdocument);
+                resolve(newdocument);
+            }).catch((e) => reject(e));
         });
     }
 
@@ -278,13 +265,19 @@ class BusinessLogic {
         });
     }
 
-    public findAgency(name: string): Promise<any[]> {
+    public find_Agency(name: string): Promise<any[]> {
         return service.searchAgencyList(name);
     }
 
-    public isSessionMeeting(): boolean {
-        return true;
-        //return this._event.IsBudgetHearing;
+    public is_SessionMeeting(): boolean {
+        return this._event.IsBudgetHearing;
+    }
+
+    public get_FolderNameToUpload(documentType: string): string {
+        if (this.is_SessionMeeting() && /^bill$/i.test(documentType)) {
+            return `Bill Drafts for ${this._event.Id}`;
+        }
+        return `Material for ${this._event.Id}`;
     }
 
     /**
@@ -313,7 +306,7 @@ class BusinessLogic {
                     cb(undefined);
                 }
                 resolve();
-            }).catch((e)=>{
+            }).catch((e) => {
                 this._onloadError = e;
                 while (this._callbackOnLoaded.length > 0) {
                     const cb = this._callbackOnLoaded.shift();
@@ -389,8 +382,9 @@ class BusinessLogic {
             if (this._eventId > 0 && McsUtil.isArray(this._agendaList) && this._agendaList.length > 0) {
                 const presentersId: number[] = [];
                 this._agendaList.forEach((tempAgenda) => {
-                    if (McsUtil.isArray(tempAgenda.PresentersLookupId)) {
-                        presentersId.push(...tempAgenda.PresentersLookupId);
+                    const presentersLookupIds: number[] = tempAgenda.PresentersLookupId as number[];
+                    if (McsUtil.isArray(presentersLookupIds)) {
+                        presentersId.push(...presentersLookupIds);
                     }
                 });
 
@@ -575,9 +569,30 @@ class BusinessLogic {
         };
     }
 
-    private _getFolderStructure(meetingYear: number, meetingId: number): IFolderCreation {
+    /**
+     * Ensure folders are created for Intrim Documents Library
+     * @param {number} meetingYear
+     * @param {number} meetingId
+     * @returns {Promise<any>}
+     * @memberof BusinessLogic
+     */
+    private _ensure_Folders(meetingYear: number, meetingId: number): Promise<any> {
+        const folderStructure = this._getFolderStructure(meetingYear, meetingId);
+        return new Promise((resolve, reject) => {
+            service.folderCreation(folderStructure)
+                .then((e) => {
+                    this._documentFolderStructure = e;
+                    resolve(e);
+                })
+                .catch((e) => {
+                    this._documentFolderStructure = folderStructure;
+                    reject(e);
+                });
+        });
+    }
 
-        if (this.isSessionMeeting()) {
+    private _getFolderStructure(meetingYear: number, meetingId: number): IFolderCreation {
+        if (this.is_SessionMeeting()) {
             return {
                 name: meetingYear.toString(),
                 SubFolder: [

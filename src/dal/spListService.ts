@@ -19,9 +19,9 @@ export default class SpListService<T> {
         this._webUrl = url;
     }
 
-    public setListTitle(listTitle: string): void {
-        this._listTitle = listTitle;
-    }
+    // public setListTitle(listTitle: string): void {
+    //     this._listTitle = listTitle;
+    // }
 
     public getListTitle(): string{
         return this._listTitle;

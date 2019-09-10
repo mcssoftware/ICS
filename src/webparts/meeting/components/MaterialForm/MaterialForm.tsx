@@ -279,7 +279,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
 
     private loadAgencyOptions = (inputValue) =>
         new Promise((resolve) => {
-            business.findAgency(inputValue)
+            business.find_Agency(inputValue)
                 .then((val) => {
                     resolve(
                         val.map(a => {
@@ -331,10 +331,10 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
             SortNumber: McsUtil.isUnsignedInt(workingDocument.sortNumber) ? parseInt(workingDocument.sortNumber) : 1,
         };
         const file: File = workingDocument.uploadFile.item[0];
-        this.setState({waitingMessage: "Uploading file"});
-        business.upLoad_Document(`Material for ${this.props.meetingId}`, file.name, uploadProperties, file)
+        this.setState({ waitingMessage: "Uploading file" });
+        business.upLoad_Document(business.get_FolderNameToUpload(uploadProperties.lsoDocumentType), file.name, uploadProperties, file)
             .then((value: ISpEventMaterial) => {
-                this.setState({waitingMessage: ""});
+                this.setState({ waitingMessage: "" });
                 this.props.onChange(value, agenda, OperationType.Add);
                 //(document: ISpEventMaterial, agenda: IComponentAgenda, type: OperationType)
             });

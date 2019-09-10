@@ -122,9 +122,9 @@ const transform = (webAbsoluteUrl: string, event: ISpEvent, agendaList: ISpAgend
             if (agendaModified > lastModifiedDate) {
                 lastModifiedDate = agendaModified;
             }
-            agenda.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId) ? a.PresentersLookupId : [], presenterList);
+            agenda.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId as number[]) ? a.PresentersLookupId as number[] : [], presenterList);
             if (McsUtil.isArray(a.AgendaDocumentsLookupId)) {
-                agenda.MeetingDocuments = a.AgendaDocumentsLookupId.map((d) => {
+                agenda.MeetingDocuments = (a.AgendaDocumentsLookupId as number[]).map((d) => {
                     const docIndex = McsUtil.binarySearch(allmaterials, d, 'Id');
                     if (docIndex < 0) {
                         return null;
@@ -150,9 +150,9 @@ const transform = (webAbsoluteUrl: string, event: ISpEvent, agendaList: ISpAgend
                 if (agendaModified > lastModifiedDate) {
                     lastModifiedDate = agendaModified;
                 }
-                subTopic.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId) ? a.PresentersLookupId : [], presenterList);
+                subTopic.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId as number[]) ? a.PresentersLookupId as number[] : [], presenterList);
                 if (McsUtil.isArray(a.AgendaDocumentsLookupId)) {
-                    subTopic.MeetingDocuments = a.AgendaDocumentsLookupId.map((d) => {
+                    subTopic.MeetingDocuments = (a.AgendaDocumentsLookupId as number[]).map((d) => {
                         const docIndex = McsUtil.binarySearch(allmaterials, d, 'Id');
                         if (docIndex < 0) {
                             return null;
