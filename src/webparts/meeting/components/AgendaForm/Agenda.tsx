@@ -2,7 +2,7 @@ import * as React from 'react';
 import styles from '../Meeting.module.scss';
 import { IAgendaProps, IAgendaState, AgendaPanelType } from './IAgenda';
 import css from '../../../../utility/css';
-import { CommandBar, SelectionMode, Selection, DetailsList, DetailsListLayoutMode, IColumn, Panel, PanelType } from 'office-ui-fabric-react';
+import { CommandBar, SelectionMode, Selection, DetailsList, DetailsListLayoutMode, IColumn, Panel, PanelType, IDragDropEvents, IDragDropContext, mergeStyles } from 'office-ui-fabric-react';
 import { IComponentAgenda, get_tranformAgenda } from "../../../../business/transformAgenda";
 import { Waiting } from '../../../../controls/waiting';
 // import { ListView, IViewField, SelectionMode, GroupOrder, IGrouping } from "@pnp/spfx-controls-react/lib/ListView";
@@ -19,6 +19,8 @@ import { Informational, InformationalType } from '../../../../controls/informati
 export default class Agenda extends React.Component<IAgendaProps, IAgendaState> {
 
     private _selection: Selection;
+    private _dragDropEvents: IDragDropEvents;
+
 
     constructor(props: Readonly<IAgendaProps>) {
         super(props);
@@ -27,6 +29,8 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 this._setSelectedAgenda();
             }
         });
+        this._dragDropEvents = this._getDragDropEvents();
+
         this.state = {
             agendaItems: get_tranformAgenda(),
             showPanel: false,
@@ -35,19 +39,20 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
             panelItem: null,
             waitingMessage: '',
             message: '',
-            messageType: InformationalType.none
+            messageType: InformationalType.none,
+            orderChanged: false,
         };
     }
 
     public render(): React.ReactElement<IAgendaProps> {
-        const { agendaItems, panelHeaderText, panelType, panelItem, selectedAgendaItem, waitingMessage } = this.state;
+        const { agendaItems, panelHeaderText, panelType, panelItem, selectedAgendaItem, waitingMessage, orderChanged } = this.state;
         const agendaSelected = McsUtil.isDefined(selectedAgendaItem);
         return (
             <div className={styles["container-fluid"]}>
                 <div className={styles.row}>
                     <div className={styles["col-12"]}>
                         <CommandBar
-                            items={this._getCommandBarItems(agendaSelected)}
+                            items={this._getCommandBarItems(agendaSelected, orderChanged)}
                             overflowItems={[]}
                             farItems={[]}
                             ariaLabel={'Use left and right arrow keys to navigate between commands'}
@@ -64,6 +69,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                             selection={this._selection}
                             layoutMode={DetailsListLayoutMode.justified}
                             compact={false}
+                            dragDropEvents={this._dragDropEvents}
                             setKey="ListViewControl" />
                     </div>
                 </div>
@@ -111,6 +117,63 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
     private _hidePanel = () => {
         this.setState({ showPanel: false });
     }
+
+    private _draggedItem: IComponentAgenda | undefined;
+    private _draggedIndex: number;
+
+    private _getDragDropEvents = (): IDragDropEvents => {
+        const dragEnterClass = mergeStyles({
+            backgroundColor: "black"
+        });
+        return {
+            canDrop: (dropContext?: IDragDropContext, dragContext?: IDragDropContext) => {
+                return true;
+            },
+            canDrag: (item?: any) => {
+                return true;
+            },
+            onDragEnter: (item?: any, event?: DragEvent) => {
+                // return string is the css classes that will be added to the entering element.
+                return dragEnterClass;
+            },
+            onDragLeave: (item?: any, event?: DragEvent) => {
+                return;
+            },
+            onDrop: (item?: any, event?: DragEvent) => {
+                if (this._draggedItem) {
+                    this._insertBeforeItem(item);
+                }
+            },
+            onDragStart: (item?: any, itemIndex?: number, selectedItems?: any[], event?: MouseEvent) => {
+                this._draggedItem = item;
+                this._draggedIndex = itemIndex!;
+            },
+            onDragEnd: (item?: any, event?: DragEvent) => {
+                this._draggedItem = undefined;
+                this._draggedIndex = -1;
+            }
+        };
+    }
+
+    private _insertBeforeItem = (item: IComponentAgenda): void => {
+        const draggedItems = this._selection.isIndexSelected(this._draggedIndex)
+            ? (this._selection.getSelection() as IComponentAgenda[])
+            : [this._draggedItem!];
+
+        const items = this.state.agendaItems.filter(itm => draggedItems.indexOf(itm) === -1);
+        let insertIndex = items.indexOf(item);
+
+        // if dragging/dropping on itself, index will be 0.
+        if (insertIndex === -1) {
+            insertIndex = 0;
+        }
+
+        items.splice(insertIndex, 0, ...draggedItems);
+        items.forEach((a, i) => a.AgendaNumber = i + 1);
+
+        this.setState({ agendaItems: items, orderChanged: true });
+    }
+
 
     private _onNewAgendaAddedOrEdited = (topic: IComponentAgenda, parentTopicId?: number): void => {
         const agendaCopy = [...this.state.agendaItems];
@@ -201,7 +264,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                     __metadata: {
                         type: "Collection(Edm.Int32)"
                     },
-                    results: this._getDocumentLookupIds((McsUtil.isArray(event.EventDocumentsLookupId) ? event.EventDocumentsLookupId as number[]: []), document.Id, type)
+                    results: this._getDocumentLookupIds((McsUtil.isArray(event.EventDocumentsLookupId) ? event.EventDocumentsLookupId as number[] : []), document.Id, type)
                 }).then((e) => {
                     if (McsUtil.isDefined(agenda)) {
                         business.edit_Agenda(agenda.Id, agenda["odata.type"],
@@ -209,7 +272,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                                 __metadata: {
                                     type: "Collection(Edm.Int32)"
                                 },
-                                results: this._getDocumentLookupIds((McsUtil.isArray(agenda.AgendaDocumentsLookupId) ? agenda.AgendaDocumentsLookupId as number[]: []), document.Id, type)
+                                results: this._getDocumentLookupIds((McsUtil.isArray(agenda.AgendaDocumentsLookupId) ? agenda.AgendaDocumentsLookupId as number[] : []), document.Id, type)
                             }).then((updatedAgenda: IComponentAgenda) => {
                                 updatedAgenda.SubTopics = [...agenda.SubTopics];
                                 updatedAgenda.Presenters = [...agenda.Presenters];
@@ -280,6 +343,15 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
         return 1;
     }
 
+    private _saveAgendaNumber = (): void => {
+        const { agendaItems } = this.state;
+        Promise.all(agendaItems.map((a) => {
+            return business.edit_Agenda(a.Id, a["odata.type"], { AgendaNumber: a.AgendaNumber });
+        })).then(() => {
+            this.setState({ orderChanged: false });
+        });
+    }
+
     private _getListColumns = (): IColumn[] => {
         return [{
             name: 'Time',
@@ -327,7 +399,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
         }];
     }
 
-    private _getCommandBarItems = (agendaSelected: boolean): any[] => {
+    private _getCommandBarItems = (agendaSelected: boolean, orderChanged: boolean): any[] => {
         return [
             {
                 key: 'newItem',
@@ -366,6 +438,17 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 disabled: !agendaSelected,
                 onClick: () => {
                     this._onMaterialDisplayBtnClicked(this.state.selectedAgendaItem, null);
+                }
+            },
+            {
+                key: 'saveOrder',
+                name: 'Save Agenda Order',
+                iconProps: {
+                    iconName: 'Sort'
+                },
+                disabled: !orderChanged,
+                onClick: () => {
+                    this._saveAgendaNumber();
                 }
             }
         ];

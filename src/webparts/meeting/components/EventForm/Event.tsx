@@ -12,6 +12,7 @@ import { ISpEvent } from '../../../../interface/spmodal';
 import { business } from '../../../../business';
 import { Waiting } from '../../../../controls/waiting';
 import { Informational, InformationalType } from '../../../../controls/informational';
+import { UrlQueryParameterCollection } from '@microsoft/sp-core-library';
 
 export default class Event extends React.Component<IEventProps, IEventState> {
 
@@ -272,9 +273,30 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             this.setState({ waitingMessage: 'Adding meeting' });
             promise = business.add_Event(propertiesToUpdate);
         }
-        promise.then((newevent) => {
-            this.setState({ event: newevent, waitingMessage: '' });
-            this.props.onChange();
+        promise.then(() => {
+            const newEvent = business.get_Event();
+            if (this.state.event.Id > 0) {
+                this.setState({ event: newEvent, waitingMessage: '' });
+                this.props.onChange();
+            } else {
+                const queryParameters: UrlQueryParameterCollection = new UrlQueryParameterCollection(window.location.href);
+                var url = window.location.href.split("?")[0] + "?PageType=6&ListId=" + queryParameters.getValue("ListId") +
+                    "&calendarItemId=" + newEvent.Id + "&Source=" + queryParameters.getValue("Source");
+                var tempTopic: any = {
+                    Title: "Call to Order",
+                    AgendaTitle: "Call to Order",
+                    AgendaNumber: 1,
+                    AgendaDate: this.state.startDate,
+                    EventLookupId: newEvent.Id,
+                    ParentTopicId: undefined,
+                    AllowPublicComments: false,
+                };
+                tempTopic.AgendaDate.setHours(0, 0, 0, 0);
+                business.add_Agenda(tempTopic)
+                    .then(() => window.location.href = url)
+                    .catch(() => window.location.href = url);
+            }
+
         }).catch(() => { });
     }
 }

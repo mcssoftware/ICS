@@ -320,7 +320,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                         result.SubTopics = [...agenda.SubTopics];
                     }
                     this.setState({ agenda: result, waitingMessage: '' });
-                    this.props.onChange(agenda);
+                    this.props.onChange(result, this.props.isSubTopic ? this.props.parentTopicId : undefined);
                 });
 
             });

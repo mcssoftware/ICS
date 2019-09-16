@@ -24,6 +24,7 @@ export interface IAgendaState {
   waitingMessage: string;
   message: string;
   messageType: InformationalType;
+  orderChanged: boolean;
 }
 
 export interface IAgendaFormProps {

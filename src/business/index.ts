@@ -149,6 +149,7 @@ class BusinessLogic {
             service.addItemToSpList(Mcs.WebConstants.agendaListId, false, properties)
                 .then((newagenda: ISpAgendaTopic) => {
                     this._agendaList.push(newagenda);
+                    tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                     resolve(newagenda);
                 }).catch((e) => reject(e));
         });
@@ -164,6 +165,7 @@ class BusinessLogic {
                             break;
                         }
                     }
+                    tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                     resolve(newagenda);
                 }).catch((e) => reject(e));
         });
@@ -179,6 +181,7 @@ class BusinessLogic {
                             break;
                         }
                     }
+                    tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                     resolve();
                 }).catch((e) => reject(e));
         });
@@ -189,6 +192,7 @@ class BusinessLogic {
             service.addItemToSpList(Mcs.WebConstants.meetingPresenterListId, false, properties)
                 .then((newpresenter: ISpPresenter) => {
                     this._presenterList.push(newpresenter);
+                    tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                     resolve(newpresenter);
                 }).catch((e) => reject(e));
         });
@@ -204,6 +208,7 @@ class BusinessLogic {
                             break;
                         }
                     }
+                    tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                     resolve(newpresenter);
                 }).catch((e) => reject(e));
         });
@@ -219,6 +224,7 @@ class BusinessLogic {
                             break;
                         }
                     }
+                    tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                     resolve();
                 }).catch((e) => reject(e));
         });
@@ -245,6 +251,7 @@ class BusinessLogic {
                 return service.get_MaterialService().addOrUpdateDocument(folderRelativeUrl, fileName, propertiesToUpdate, blob);
             }).then((newdocument: ISpEventMaterial) => {
                 this._documentList.push(newdocument);
+                tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                 resolve(newdocument);
             }).catch((e) => reject(e));
         });
@@ -260,6 +267,7 @@ class BusinessLogic {
                             break;
                         }
                     }
+                    tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                     resolve(newdocument);
                 }).catch((e) => reject(e));
         });
@@ -533,7 +541,7 @@ class BusinessLogic {
     private _getDefaultEvent(): ISpEvent {
         let meetingdate = new Date();
         const queryParameters: UrlQueryParameterCollection = new UrlQueryParameterCollection(window.location.href);
-        if (McsUtil.isNumberString(queryParameters.getValue("startdate"))) {
+        if (McsUtil.isString(queryParameters.getValue("startdate"))) {
             try {
                 const tempdate = new Date(queryParameters.getValue("startdate"));
                 if (McsUtil.isDefined(tempdate)) {
@@ -551,8 +559,8 @@ class BusinessLogic {
             ConferenceNumber: '',
             Category: 'Tentative',
             WorkState: 'Wyoming',
-            EventDate: (new Date(startdate.toLocaleDateString())).toISOString(),
-            EndDate: (new Date(endate.toLocaleDateString())).toISOString(),
+            EventDate: startdate.toISOString(),// (new Date(startdate.toLocaleDateString())).toISOString(),
+            EndDate: endate.toISOString(),//(new Date(endate.toLocaleDateString())).toISOString(),
             MeetingStartTime: startdate.toLocaleTimeString(),
             Description: '',
             HasLiveStream: false,
