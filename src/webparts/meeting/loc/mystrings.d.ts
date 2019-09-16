@@ -1,7 +1,7 @@
 declare interface IMeetingWebPartStrings {
   PropertyPaneDescription: string;
   BasicGroupName: string;
-  DescriptionFieldLabel: string;
+  // DescriptionFieldLabel: string;
 }
 
 declare module 'MeetingWebPartStrings' {

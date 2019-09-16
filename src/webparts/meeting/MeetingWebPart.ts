@@ -17,7 +17,7 @@ import { business } from '../../business';
 
 
 export interface IMeetingWebPartProps {
-  description: string;
+  // description: string;
 }
 
 export default class MeetingWebPart extends BaseClientSideWebPart<IMeetingWebPartProps> {
@@ -62,18 +62,18 @@ export default class MeetingWebPart extends BaseClientSideWebPart<IMeetingWebPar
           header: {
             description: strings.PropertyPaneDescription
           },
-          groups: [
-            {
+          groups: [ ]
+        }
+      ]
+    };
+  }
+}
+
+/**{
               groupName: strings.BasicGroupName,
               groupFields: [
                 PropertyPaneTextField('description', {
                   label: strings.DescriptionFieldLabel
                 })
               ]
-            }
-          ]
-        }
-      ]
-    };
-  }
-}
+            } */
