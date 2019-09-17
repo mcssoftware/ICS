@@ -23,7 +23,7 @@ export default class SpListService<T> {
     //     this._listTitle = listTitle;
     // }
 
-    public getListTitle(): string{
+    public getListTitle(): string {
         return this._listTitle;
     }
 
@@ -34,6 +34,10 @@ export default class SpListService<T> {
         // } else {
         return this._getRestData(filter, select, expand, orderBy, skip, top);
         // }
+    }
+
+    public getListItemVersions(id: number, selects?: string[], expand?: string[]): Promise<any[]> {
+        return this._getList().items.getById(id).versions.select(...(selects || [])).expand(...(expand || [])).get();
     }
 
     public getSelects(): string[] {

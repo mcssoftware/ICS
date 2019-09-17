@@ -1,6 +1,6 @@
-import { ISpEvent, ISpAgendaTopic, ISpPresenter, ISpEventMaterial, ISpCommitteeLink, IListItem } from "../interface/spmodal";
+import { ISpEvent, ISpAgendaTopic, ISpPresenter, ISpEventMaterial, ISpCommitteeLink, IListItem, IBillVersion } from "../interface/spmodal";
 import SpListService from "./spListService";
-import { uniq, sortBy } from "@microsoft/sp-lodash-subset";
+import { uniq, sortBy, uniqBy, findIndex } from "@microsoft/sp-lodash-subset";
 import { McsUtil } from "../utility/helper";
 import { IFolderCreation } from "./interface";
 
@@ -13,7 +13,6 @@ class Service {
     private _meetingMaterialService: SpListService<ISpEventMaterial>;
     private _committeeLinkService: SpListService<ISpCommitteeLink>;
     private _agencyList: SpListService<any>;
-
 
     constructor() {
     }
@@ -205,12 +204,113 @@ class Service {
     }
 
     public searchAgencyList(agencyName: string): Promise<any[]> {
-        if (!McsUtil.isString(agencyName)) {
-            return this._agencyList.getListItems(null, null, null, [{ Field: 'AgencyName', IsAscending: true }], 0, 50);
-        } else {
-            return this._agencyList.getListItems(`IsAgencyDirector eq 1 and (substringof('${agencyName}',AgencyName) or substringof('${agencyName}',Title))`, null, null,
-                [{ Field: 'AgencyName', IsAscending: true }], 0, 50);
-        }
+        return new Promise((resolve, reject) => {
+            let promise: Promise<any[]>;
+            if (!McsUtil.isString(agencyName)) {
+                promise = this._agencyList.getListItems(null, null, null, [{ Field: 'AgencyName', IsAscending: true }], 0, 50);
+            } else {
+                promise = this._agencyList.getListItems(`IsAgencyDirector eq 1 and (substringof('${agencyName}',AgencyName) or substringof('${agencyName}',Title))`, null, null,
+                    [{ Field: 'AgencyName', IsAscending: true }], 0, 50);
+            }
+            promise.then((data: any[]) => {
+                const uniqueData = uniqBy(data, a => a.AgencyName);
+                resolve(uniqueData);
+            }).catch();
+        });
+    }
+
+    public getLmsBill(currentLmsUrl: string, lsonumber?: string): Promise<any[]> {
+        return new Promise((resolve, reject) => {
+            const billsService = new SpListService<any>('Bills', false);
+            billsService.setWebUrl(currentLmsUrl);
+            billsService.getSelects = () => [
+                "BillDisclosed",
+                "BillEffectiveDate",
+                "BillNumber",
+                "BillStatus",
+                "BillTitle",
+                "BillType",
+                "BillYear",
+                "CatchTitle",
+                "ChapterNumber",
+                "ChapterSignedOn",
+                "ContactPerson",
+                "CoSponsor",
+                "DateReceived",
+                "DocumentStatus",
+                "DocumentVersion",
+                "DrafterId",
+                "EnrolledNumber",
+                "FiscalAnalystUserId",
+                "HasFiscalImpact",
+                "HouseAmendments",
+                "HouseofOrigin",
+                "LegislationType",
+                "LSONumber",
+                "ReleaseBill",
+                "Requestor",
+                "RevenueRaising",
+                "RevenueRaisingDate",
+                "SenateAmendments",
+                "Sponsor",
+                "SponsorshipClause",
+                "SponsorTitle",
+                "SubstituteNumber",
+                "File",
+            ];
+
+            billsService.getExpands = () => ['File'];
+
+            let filter = "(BillStatus ne 'Inactive' or ReleaseBill ne 'None')";
+            if (McsUtil.isString(lsonumber)) {
+                filter = `${filter} and substringof('${lsonumber}',LSONumber)`;
+            }
+            billsService.getListItems(filter, null, null, [{ Field: 'LSONumber', IsAscending: true }], 0, 100).then((bills) => {
+                resolve(bills);
+            }).catch(() => {
+                resolve([]);
+            });
+        });
+    }
+
+    public getBillVersion(currentLmsUrl: string, billId: number): Promise<IBillVersion[]> {
+        return new Promise((resolve, reject) => {
+            const billsService = new SpListService<any>('Bills', false);
+            billsService.setWebUrl(currentLmsUrl);
+            const selects = [
+                "CatchTitle",
+                "DocumentStatus",
+                "DocumentVersion",
+                "IsCurrentVersion",
+                "FileLeafRef",
+                "VersionId",
+                "VersionLabel"
+            ];
+
+            billsService.getListItemVersions(billId, selects, undefined)
+                .then((result) => {
+                    const filteredBillVersion = [];
+                    for (let i = 0; i < result.length; i++) {
+                        let isInList = false;
+                        for (var j = 0; j < filteredBillVersion.length; j++) {
+                            if (result[i].DocumentVersion == filteredBillVersion[j].DocumentVersion) {
+                                if (result[i].VersionId > filteredBillVersion[j].VersionId) {
+                                    filteredBillVersion[j].VersionId = result[i].VersionId;
+
+                                }
+                                isInList = true;
+                                break;
+                            }
+                        }
+                        if (!isInList)
+                            filteredBillVersion.push(result[i]);
+                    }
+                    resolve(filteredBillVersion);
+                })
+                .catch(() => {
+                    resolve([]);
+                });
+        });
     }
 
     public get_MaterialService(): SpListService<ISpEventMaterial> {

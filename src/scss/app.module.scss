@@ -13,16 +13,5 @@
 @import "spfx/checkbox.module.scss";
 @import "spfx/label.module.scss";
 @import "spfx/datepicker.module.scss";
-
-// fix css for calendar
-:global .ms-DatePicker-dayPicker {
-    :global .ms-DatePicker-table {
-  
-      input[type=button],
-      input[type=reset],
-      input[type=submit],
-      button {
-        min-width: 24px !important;
-      }
-    }
-  }
+@import "spfx/button.module.scss";
+@import "spfx/button.module.scss";

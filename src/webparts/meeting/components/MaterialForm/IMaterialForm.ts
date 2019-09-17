@@ -26,6 +26,8 @@ export interface IWorkingDocument {
     uploadFile?: FileList;
     includeWithAgenda: boolean;
     selectedAgency: any;
+    selectedBill: any;
+    selectedBillVersion: any;
     lsoDocumentType: string;
 }
 
@@ -36,4 +38,5 @@ export interface IMaterialFormState {
     workingDocument: IWorkingDocument;
     documentId: number;
     waitingMessage?: string;
+    loadingBillVersion: boolean;
 }

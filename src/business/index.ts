@@ -4,7 +4,7 @@ import { IDbCommittee, IDbStaff, IDbMembers } from "../interface/dbmodal";
 import { McsUtil } from "../utility/helper";
 import service from "../dal/service";
 import lobService from "../dal/lobService";
-import { ISpEvent, ISpAgendaTopic, ISpCommitteeLink, ISpEventMaterial, ISpPresenter, IDocumentItem } from '../interface/spmodal';
+import { ISpEvent, ISpAgendaTopic, ISpCommitteeLink, ISpEventMaterial, ISpPresenter, IDocumentItem, IBillVersion } from '../interface/spmodal';
 import { UrlQueryParameterCollection } from '@microsoft/sp-core-library';
 import { tranformAgenda } from "./transformAgenda";
 import { IFolderCreation } from '../dal/interface';
@@ -28,6 +28,7 @@ class BusinessLogic {
     private _meetingCommittees: IDbCommittee[];
     private _config: IBusinessLogicConfig;
     private _documentFolderStructure: IFolderCreation;
+    private _currentLmsUrl: string;
 
     private _callbackOnLoaded: Array<(reject: any) => void>;
 
@@ -36,6 +37,7 @@ class BusinessLogic {
     constructor() {
         this._config = {} as IBusinessLogicConfig;
         this._callbackOnLoaded = [];
+        this._currentLmsUrl = "";
     }
 
     /**
@@ -277,6 +279,14 @@ class BusinessLogic {
         return service.searchAgencyList(name);
     }
 
+    public find_Bill(lsonumber?: string): Promise<any[]> {
+        return service.getLmsBill(this._currentLmsUrl, lsonumber);
+    }
+
+    public find_BillItemVersion(billId: number): Promise<IBillVersion[]> {
+        return service.getBillVersion(this._currentLmsUrl, billId);
+    }
+
     public is_SessionMeeting(): boolean {
         return this._event.IsBudgetHearing;
     }
@@ -286,6 +296,13 @@ class BusinessLogic {
             return `Bill Drafts for ${this._event.Id}`;
         }
         return `Material for ${this._event.Id}`;
+    }
+
+    public getDocumentFromIntranet(serverRelativeUrl: string, versionLabel?: string): Promise<Blob> {
+        const url = McsUtil.combinePaths(Mcs.WebConstants.lmsServiceBase,
+            'api/Intranet/GetIntranetDocument?&clean=true' + `&webUrl=${this._currentLmsUrl}&serverRelativeUrl=${serverRelativeUrl}` +
+                McsUtil.isString(versionLabel) ? `&version=${versionLabel}` : '');
+        return lobService.getBlob(this._config.spfxContext.serviceScope, url);
     }
 
     /**
@@ -302,25 +319,41 @@ class BusinessLogic {
             if (McsUtil.isNumberString(queryParameters.getValue("calendaritemid"))) {
                 this._eventId = parseInt(queryParameters.getValue("calendaritemid"), 10);
             }
-            this._loadCommitteeLinks().then(() => {
-                return Promise.all([this._loadEvent(), this._loadAgenda()]);
-            }).then(() => {
-                const startdate = new Date(this._event.EventDate);
-                return Promise.all([this._loadIntrimDocuments(), this._loadPresenters(), this._loadEventCommittees(startdate.getFullYear())]);
-            }).then(() => {
-                tranformAgenda(this._agendaList, this._documentList, this._presenterList);
-                while (this._callbackOnLoaded.length > 0) {
-                    const cb = this._callbackOnLoaded.shift();
-                    cb(undefined);
-                }
-                resolve();
-            }).catch((e) => {
-                this._onloadError = e;
-                while (this._callbackOnLoaded.length > 0) {
-                    const cb = this._callbackOnLoaded.shift();
-                    cb(e);
-                }
-            });
+            Promise.all([this._loadCommitteeLinks(), this._getSiteConfiguration()])
+                .then(() => {
+                    return Promise.all([this._loadEvent(), this._loadAgenda()]);
+                }).then(() => {
+                    const startdate = new Date(this._event.EventDate);
+                    return Promise.all([this._loadIntrimDocuments(), this._loadPresenters(), this._loadEventCommittees(startdate.getFullYear())]);
+                }).then(() => {
+                    if (this._event.Id == 0) {
+                        const staff = [];
+                        this._meetingCommittees.forEach((c) => {
+                            if (McsUtil.isArray(c.Staff) && c.Staff.length > 0) {
+                                staff.push(...c.Staff.filter(s => McsUtil.isString(s.name)).map(s => s.name));
+                            }
+                        });
+                        if (staff.length > 1) {
+                            const lastStaff = staff.pop();
+                            this._event.CommitteeStaff = staff.join(', ') + ' and ' + lastStaff;
+                        } else {
+                            this._event.CommitteeStaff = staff.join('');
+                        }
+                    }
+
+                    tranformAgenda(this._agendaList, this._documentList, this._presenterList);
+                    while (this._callbackOnLoaded.length > 0) {
+                        const cb = this._callbackOnLoaded.shift();
+                        cb(undefined);
+                    }
+                    resolve();
+                }).catch((e) => {
+                    this._onloadError = e;
+                    while (this._callbackOnLoaded.length > 0) {
+                        const cb = this._callbackOnLoaded.shift();
+                        cb(e);
+                    }
+                });
         });
     }
 
@@ -498,6 +531,17 @@ class BusinessLogic {
                     }
                     response(response.data.employees);
                 }).catch((e) => resolve([]));
+        });
+    }
+
+    private _getSiteConfiguration(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            lobService.getData(this._config.spfxContext.serviceScope,
+                McsUtil.combinePaths(Mcs.WebConstants.lmsServiceBase, 'api/Intranet/GetSiteConfiguration'))
+                .then((response) => {
+                    this._currentLmsUrl = response["CURRENT LMS URL"];
+                    resolve();
+                }).catch((e) => resolve());
         });
     }
 

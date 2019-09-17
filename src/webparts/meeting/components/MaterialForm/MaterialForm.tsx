@@ -6,19 +6,24 @@ import styles from '../Meeting.module.scss';
 import css from '../../../../utility/css';
 import { McsUtil } from '../../../../utility/helper';
 import AsyncSelect from 'react-select/async';
+import Select from 'react-select';
 import { cloneDeep } from '@microsoft/sp-lodash-subset';
 import { business } from '../../../../business';
-import { ISpEventMaterial, OperationType } from '../../../../interface/spmodal';
+import { ISpEventMaterial, OperationType, IBillVersion } from '../../../../interface/spmodal';
 
 export default class MaterialForm extends React.Component<IMaterialFormProp, IMaterialFormState> {
 
+    private _billVersions: IBillVersion[];
+
     constructor(props: Readonly<IMaterialFormProp>) {
         super(props);
+        this._billVersions = [];
         this.state = {
             selectedSubTopic: null,
+            loadingBillVersion: false,
             // workingDoc: McsUtil.isDefined(props.document) ? { ...props.document } : {} as ISpEventMaterial,
             agenda: props.requireAgendaSelection ? null : (McsUtil.isArray(props.agenda) && props.agenda.length == 1 ? props.agenda[0] : null),
-            documentUploadType: DocumentUploadType.InterimDocument,
+            documentUploadType: business.is_SessionMeeting() ? DocumentUploadType.SessionDocuments : DocumentUploadType.InterimDocument,
             documentId: McsUtil.isDefined(props.document) ? props.document.Id : 0,
             workingDocument: McsUtil.isDefined(props.document) ?
                 {
@@ -62,7 +67,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     <Dropdown
                         label="SubTopic"
                         className={marginClassName}
-                        selectedKey={McsUtil.isDefined(selectedSubTopic) ? selectedSubTopic.Id : 0}
+                        selectedKey={McsUtil.isDefined(selectedSubTopic) ? selectedSubTopic.Id.toString() : "0"}
                         onChange={this._onSubTopicSelected}
                         placeholder="Select an option"
                         disabled={!McsUtil.isDefined(this.state.agenda)}
@@ -80,9 +85,9 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                             placeholder="Select an option"
                             disabled={documentId > 0}
                             options={[
-                                { key: DocumentUploadType.InterimDocument, text: 'Interim Document' },
+                                { key: DocumentUploadType.InterimDocument, text: 'Upload Document', disabled: !business.is_SessionMeeting() },
                                 { key: DocumentUploadType.LSOBill, text: 'Bills From LMS' },
-                                { key: DocumentUploadType.SessionDocuments, text: 'Session Document' },
+                                { key: DocumentUploadType.SessionDocuments, text: 'Attached Session Document' },
                             ]}
                         />
                     </div>
@@ -145,18 +150,33 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                 <div>
                     <div className={styles.row}>
                         <div className={styles["col-6"]}>
-                            <TextField label="Bill" value={workingDocument.lsonumber} className={marginClassName} name="lsoNumber" onChange={this._onDocTextPropertyChange} />
+                            <Label>Bill</Label>
+                            <AsyncSelect defaultOptions={true}
+                                isClearable={true}
+                                value={workingDocument.selectedBill}
+                                onChange={this._billSelectChange}
+                                loadOptions={this.loadBillOptions} />
                         </div>
                         <div className={styles["col-6"]}>
-                            <TextField label="Bill Version" value={workingDocument.billVersion} className={marginClassName} name="billVersion" onChange={this._onDocTextPropertyChange} />
+                            <Label>Bill Version</Label>
+                            <Select
+                                value={workingDocument.selectedBillVersion}
+                                isLoading={this.state.loadingBillVersion}
+                                isSearchable={true}
+                                isClearable={true}
+                                name="billversion"
+                                onChange={this._billVersionSelectChange}
+                                options={this._billVersions.map(a => { return { value: a.VersionLabel, label: `${a.DocumentStatus} (${a.DocumentVersion})` }; })}
+                            />
                         </div>
                     </div>
-                    <div>
+                    <div className={css.combine(styles.row, styles["mt-2"])}>
                         <div className={styles["col-6"]}>
                             <DefaultButton text="Get Bill from LMS"
-                                disabled={!McsUtil.isString(workingDocument.lsonumber) || !McsUtil.isString(workingDocument.billVersion)} />
+                                className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
+                                disabled={!McsUtil.isString(workingDocument.lsonumber) || !McsUtil.isDefined(workingDocument.billVersion)}
+                                onClick={this._uploadBillToSp} />
                         </div>
-
                     </div>
                 </div>
             }
@@ -214,7 +234,8 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         if (option.key == "0") {
             this.setState({ selectedSubTopic: null });
         } else {
-            this.setState({ selectedSubTopic: this.state.agenda.SubTopics.filter(a => a.Id == (option.key as number))[0] });
+            const selectedSubTopic = this.state.agenda.SubTopics.filter(a => a.Id == (option.key as number))[0];
+            this.setState({ selectedSubTopic });
         }
     }
 
@@ -270,10 +291,26 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         return options;
     }
 
-    private _agencySelectChange(value) {
+    private _agencySelectChange = (value): void => {
         const agency = McsUtil.isDefined(value) ? value.label : '';
         let { workingDocument } = this.state;
         workingDocument = { ...workingDocument, selectedAgency: value, agency };
+        this.setState({ workingDocument });
+    }
+
+    private _billSelectChange = (value): void => {
+        const lsonumber = McsUtil.isDefined(value) ? value.label : '';
+        let { workingDocument } = this.state;
+        workingDocument = { ...workingDocument, lsonumber, selectedBill: value, selectedBillVersion: undefined, billVersion: undefined };
+        this.setState({ workingDocument, loadingBillVersion: true });
+        this._billVersions = [];
+        this.loadBillVersionsOptions(value);
+    }
+
+    private _billVersionSelectChange = (value): void => {
+        const billVersion = McsUtil.isDefined(value) ? value.value : undefined;
+        let { workingDocument } = this.state;
+        workingDocument = { ...workingDocument, selectedBillVersion: value, billVersion };
         this.setState({ workingDocument });
     }
 
@@ -289,6 +326,36 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                             };
                         }));
                 });
+        })
+
+    private loadBillOptions = (inputValue) =>
+        new Promise((resolve) => {
+            business.find_Bill(inputValue)
+                .then((val) => {
+                    resolve(
+                        val.map(a => {
+                            return {
+                                value: a.Id,
+                                label: a.LSONumber,
+                                item: a
+                            };
+                        }));
+                });
+        })
+
+    private loadBillVersionsOptions = (selectedBill: any) =>
+        new Promise((resolve) => {
+            if (McsUtil.isDefined(selectedBill) && selectedBill.value > 0) {
+                business.find_BillItemVersion(selectedBill.value)
+                    .then((val) => {
+                        this._billVersions = val;
+                        this.setState({ loadingBillVersion: false });
+                    });
+            } else {
+                this._billVersions = [];
+                this.setState({ loadingBillVersion: false });
+            }
+
         })
 
     private _getSubTopicOptions = (): IDropdownOption[] => {
@@ -336,7 +403,36 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
             .then((value: ISpEventMaterial) => {
                 this.setState({ waitingMessage: "" });
                 this.props.onChange(value, agenda, OperationType.Add);
-                //(document: ISpEventMaterial, agenda: IComponentAgenda, type: OperationType)
             });
+    }
+
+    private _uploadBillToSp = (): void => {
+        const { workingDocument, agenda } = this.state;
+        const selectedVersion = this._billVersions.filter(a => a.VersionLabel == workingDocument.billVersion);
+        const isCurrentVersion = selectedVersion[0].IsCurrentVersion;
+        const selectedBill: any = workingDocument.selectedBill.item;
+        this.setState({ waitingMessage: "" });
+        business.getDocumentFromIntranet(selectedBill.File.ServerRelativeUrl, isCurrentVersion ? undefined : workingDocument.billVersion)
+            .then((value: Blob) => {
+                const uploadProperties: ISpEventMaterial = {
+                    lsoDocumentType: "Meeting Attachments",
+                    AgencyName: "LSO",
+                    Title: selectedBill.LSONumber + " v" + selectedVersion[0].DocumentVersion + " " + selectedVersion[0].CatchTitle,
+                    IncludeWithAgenda: workingDocument.includeWithAgenda,
+                    SortNumber: McsUtil.isUnsignedInt(workingDocument.sortNumber) ? parseInt(workingDocument.sortNumber) : 1,
+                };
+                var filename = selectedVersion[0].FileLeafRef; // uriparts[uriparts.length - 1];
+                var lastindex = filename.lastIndexOf(".");
+                var extension = "docx"; //"pdf";
+                if (lastindex > 0) {
+                    //extension = filename.substring(lastindex + 1);
+                    filename = filename.substring(0, lastindex);
+                }
+                var fileNameToUpload: string = filename + " v" + selectedVersion[0].DocumentVersion + "." + extension;
+                return business.upLoad_Document(business.get_FolderNameToUpload(uploadProperties.lsoDocumentType), fileNameToUpload, uploadProperties, value);
+            }).then((value: ISpEventMaterial) => {
+                this.setState({ waitingMessage: "" });
+                this.props.onChange(value, agenda, OperationType.Add);
+            }).catch();
     }
 }

@@ -59,6 +59,7 @@ export interface IListItem {
 export interface IItemVersion extends IListItem {
     VersionId: number;
     VersionLabel: string;
+    IsCurrentVersion: boolean;
 }
 export interface IDocumentItem extends IListItem {
     File?: IFile;
@@ -130,6 +131,13 @@ export interface ISpCommitteeLink extends IListItem {
     CommitteeName: string;
     DisplayOrder: string;
     CommitteeDesktopUrl: string;
+}
+
+export interface IBillVersion extends IItemVersion {
+    DocumentStatus: string;
+    DocumentVersion: string;
+    CatchTitle: string;
+    FileLeafRef: string;
 }
 
 export enum OperationType {
