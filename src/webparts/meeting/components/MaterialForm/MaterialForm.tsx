@@ -187,17 +187,17 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                             <div className={marginClassName}>
                                 <Label>Providing Agency</Label>
                                 <AsyncSelect defaultOptions={true}
-                                    value={workingDocument.selectedAgency}
-                                    onChange={this._agencySelectChange}
-                                    loadOptions={this.loadAgencyOptions} />
+                                    value={workingDocument.searchSelectedAgency}
+                                    onChange={this._searchAgencySelectChange}
+                                    loadOptions={this.loadAgencyOptionsForSearch} />
                             </div>
                         </div>
                         <div className={styles["col-6"]}>
                             <div className={marginClassName}>
                                 <Label>Document</Label>
                                 <AsyncSelect defaultOptions={true}
-                                    // value={workingDocument.selectedAgency}
-                                    // onChange={this._agencySelectChange}
+                                    value={workingDocument.searchSelectedDocument}
+                                    onChange={this._searchDocumentSelectChange}
                                     loadOptions={this.loadDocumentOptions} />
                             </div>
                         </div>
@@ -206,10 +206,10 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                         <div className={styles["col-6"]}>
                             <div className={css.combine(marginClassName, styles["mt-2"], styles["d-flex"])}>
                                 <DefaultButton text="Attach Session Document"
-                                    disabled={!McsUtil.isUnsignedInt(workingDocument.sessionDocumentId)}
+                                    disabled={!this._canAttachDocument()}
                                     className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
-                                    style={{ maxWidth: '60%' }} />
-                                <DefaultButton text="Cancel" className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])} />
+                                    style={{ maxWidth: '60%' }}
+                                    onClick={this._attachMaterial} />
                             </div>
                         </div>
                     </div>
@@ -221,7 +221,8 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                         <TextField label="Attachment Title"
                             name="title"
                             className={marginClassName}
-                            value={workingDocument.title} onChange={this._onDocTextPropertyChange} />
+                            value={workingDocument.title}
+                            onChange={this._onDocTextPropertyChange} />
                     </div>
                     <div className={styles["col-6"]}>
                         <div className={marginClassName}>
@@ -315,9 +316,20 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         return false;
     }
 
+    private _canAttachDocument = (): boolean => {
+        const { workingDocument } = this.state;
+        const document: ISpEventMaterial = (workingDocument.searchSelectedDocument || {}).item;
+        if (McsUtil.isDefined(document)) {
+            if (McsUtil.isString(document.AgencyName) || (McsUtil.isDefined(workingDocument.selectedAgency) && McsUtil.isString(workingDocument.selectedAgency.value))) {
+                return McsUtil.isUnsignedInt(workingDocument.sortNumber);
+            }
+        }
+        return false;
+    }
+
     private _canUpdateDocument = (): boolean => {
         const { workingDocument } = this.state;
-        if (McsUtil.isString(workingDocument.title) && McsUtil.isUnsignedInt(workingDocument.sortNumber) &&
+        if (McsUtil.isString(workingDocument.searchSelectedDocument) && McsUtil.isUnsignedInt(workingDocument.searchSelectedDocument.value) &&
             McsUtil.isDefined(workingDocument.selectedAgency) && McsUtil.isString(workingDocument.selectedAgency.value)) {
             return true;
         }
@@ -346,6 +358,18 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         this.setState({ workingDocument });
     }
 
+    private _searchAgencySelectChange = (value): void => {
+        let { workingDocument } = this.state;
+        workingDocument = { ...workingDocument, searchSelectedAgency: value };
+        this.setState({ workingDocument });
+    }
+
+    private _searchDocumentSelectChange = (value): void => {
+        let { workingDocument } = this.state;
+        workingDocument = { ...workingDocument, searchSelectedDocument: value };
+        this.setState({ workingDocument });
+    }
+
     private _billSelectChange = (value): void => {
         const lsonumber = McsUtil.isDefined(value) ? value.label : '';
         let { workingDocument } = this.state;
@@ -370,6 +394,20 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                         val.map(a => {
                             return {
                                 value: a.AgencyName,
+                                label: a.AgencyName
+                            };
+                        }));
+                });
+        })
+
+    private loadAgencyOptionsForSearch = (inputValue) =>
+        new Promise((resolve) => {
+            business.find_Agency(inputValue)
+                .then((val) => {
+                    resolve(
+                        val.map(a => {
+                            return {
+                                value: a.Title,
                                 label: a.AgencyName
                             };
                         }));
@@ -408,13 +446,17 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
 
     private loadDocumentOptions = (inputValue) =>
         new Promise((resolve) => {
-            business.find_Document(inputValue)
+            let agencyname = McsUtil.isDefined(this.state.workingDocument) && McsUtil.isDefined(this.state.workingDocument.searchSelectedAgency) &&
+                McsUtil.isDefined(this.state.workingDocument.searchSelectedAgency.value) ? this.state.workingDocument.searchSelectedAgency.label : undefined;
+            let agencynumber = McsUtil.isDefined(this.state.workingDocument) && McsUtil.isDefined(this.state.workingDocument.searchSelectedAgency) &&
+                McsUtil.isDefined(this.state.workingDocument.searchSelectedAgency.value) ? this.state.workingDocument.searchSelectedAgency.value : undefined;
+            business.find_Document(agencyname, agencynumber, inputValue)
                 .then((val) => {
                     resolve(
                         val.map(a => {
                             return {
                                 value: a.Id,
-                                label: a.Title,
+                                label: a.FileLeafRef,
                                 item: a
                             };
                         }));
@@ -452,7 +494,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
     }
 
     private _uploadFileToSp = (): void => {
-        const { workingDocument, agenda } = this.state;
+        const { workingDocument, agenda, selectedSubTopic } = this.state;
         const uploadProperties: ISpEventMaterial = {
             lsoDocumentType: workingDocument.lsoDocumentType,
             AgencyName: workingDocument.selectedAgency.label,
@@ -465,12 +507,12 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         business.upLoad_Document(business.get_FolderNameToUpload(uploadProperties.lsoDocumentType), file.name, uploadProperties, file)
             .then((value: ISpEventMaterial) => {
                 this.setState({ waitingMessage: "" });
-                this.props.onChange(value, agenda, OperationType.Add);
+                this.props.onChange(value, McsUtil.isDefined(selectedSubTopic) ? selectedSubTopic : agenda, OperationType.Add);
             });
     }
 
     private _uploadBillToSp = (): void => {
-        const { workingDocument, agenda } = this.state;
+        const { workingDocument, agenda, selectedSubTopic } = this.state;
         const selectedVersion = this._billVersions.filter(a => a.VersionLabel == workingDocument.billVersion);
         const isCurrentVersion = selectedVersion[0].IsCurrentVersion;
         const selectedBill: any = workingDocument.selectedBill.item;
@@ -495,13 +537,13 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                 return business.upLoad_Document(business.get_FolderNameToUpload(uploadProperties.lsoDocumentType), fileNameToUpload, uploadProperties, value);
             }).then((value: ISpEventMaterial) => {
                 this.setState({ waitingMessage: "" });
-                this.props.onChange(value, agenda, OperationType.Add);
+                this.props.onChange(value, McsUtil.isDefined(selectedSubTopic) ? selectedSubTopic : agenda, OperationType.Add);
             }).catch();
     }
 
     private _updateMaterial = (): void => {
         const { document } = this.props;
-        const { workingDocument, agenda } = this.state;
+        const { workingDocument, agenda, selectedSubTopic } = this.state;
         business.edit_Document(document.Id, document["odata.type"], {
             AgencyName: workingDocument.selectedAgency.label,
             Title: workingDocument.title,
@@ -509,7 +551,21 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
             SortNumber: parseInt(workingDocument.sortNumber),
         }).then((value: ISpEventMaterial) => {
             this.setState({ waitingMessage: "" });
-            this.props.onChange(value, agenda, OperationType.Edit);
+            this.props.onChange(value, McsUtil.isDefined(selectedSubTopic) ? selectedSubTopic : agenda, OperationType.Edit);
+        });
+    }
+
+    private _attachMaterial = (): void => {
+        const { workingDocument, agenda, selectedSubTopic } = this.state;
+        const document: ISpEventMaterial = workingDocument.searchSelectedDocument.item;
+        business.edit_Document(document.Id, document["odata.type"], {
+            AgencyName: workingDocument.selectedAgency.label,
+            Title: McsUtil.isString(document.Title) ? document.Title : document.File.Name,
+            IncludeWithAgenda: workingDocument.includeWithAgenda,
+            SortNumber: parseInt(workingDocument.sortNumber),
+        }).then((value: ISpEventMaterial) => {
+            this.setState({ waitingMessage: "" });
+            this.props.onChange(value, McsUtil.isDefined(selectedSubTopic) ? selectedSubTopic : agenda, OperationType.Add);
         });
     }
 }

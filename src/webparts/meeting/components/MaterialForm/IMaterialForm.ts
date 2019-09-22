@@ -28,6 +28,8 @@ export interface IWorkingDocument {
     selectedBill: any;
     selectedBillVersion: any;
     lsoDocumentType: string;
+    searchSelectedAgency: any;
+    searchSelectedDocument: any;
 }
 
 export interface IMaterialFormState {

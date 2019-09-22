@@ -296,7 +296,7 @@ class BusinessLogic {
         return service.getBillVersion(this._currentLmsUrl, billId);
     }
 
-    public find_Document(agencyName?: string, search?: string): Promise<any[]> {
+    public find_Document(agencyName?: string, agencyNumber?: string, search?: string): Promise<any[]> {
         return new Promise((resolve, reject) => {
             service.setIsSession(this.is_SessionMeeting());
             service.get_MaterialService().loadList().then((listresult) => {
@@ -306,8 +306,15 @@ class BusinessLogic {
                 if (McsUtil.isString(agencyName)) {
                     filter = `${filter} and substringof('${agencyName}',AgencyName)`;
                 }
+                const tempFilter = [];
                 if (McsUtil.isString(search)) {
-                    filter = `${filter} and (substringof('${search}',FileLeafRef) or substringof('${search}',Title))`;
+                    tempFilter.push(`(substringof('${search}',FileLeafRef) or substringof('${search}',Title))`);
+                }
+                if (McsUtil.isString(agencyNumber)) {
+                    tempFilter.push(`(substringof('${agencyNumber}',FileLeafRef) or substringof('${agencyNumber}',Title))`);
+                }
+                if (tempFilter.length > 0) {
+                    filter = `${filter} and (${tempFilter.join(' or ')})`;
                 }
                 return service.get_MaterialService().getListItems(filter, null, null, null, null, 100);
             }).then((searchResult) => {
