@@ -4,8 +4,6 @@ import { uniq, sortBy, uniqBy, findIndex } from "@microsoft/sp-lodash-subset";
 import { McsUtil } from "../utility/helper";
 import { IFolderCreation } from "./interface";
 
-const sessionDocumentLibrary: string = 'Session Document';
-
 class Service {
     private _eventService: SpListService<ISpEvent>;
     private _agendaService: SpListService<ISpAgendaTopic>;
@@ -13,6 +11,7 @@ class Service {
     private _meetingMaterialService: SpListService<ISpEventMaterial>;
     private _committeeLinkService: SpListService<ISpCommitteeLink>;
     private _agencyList: SpListService<any>;
+    private _isSessionEvent: boolean;
 
     constructor() {
     }
@@ -33,14 +32,15 @@ class Service {
     }
 
     public setIsSession(isSession: boolean): void {
+        this._isSessionEvent = isSession;
         if (isSession) {
-            this._meetingMaterialService = new SpListService<ISpEventMaterial>(sessionDocumentLibrary, false);
+            this._meetingMaterialService = new SpListService<ISpEventMaterial>(Mcs.WebConstants.sessionDocumentLibraryId, false);
         } else {
-            this._meetingMaterialService = new SpListService<ISpEventMaterial>(Mcs.WebConstants.meetingPresenterListId, false);
+            this._meetingMaterialService = new SpListService<ISpEventMaterial>(Mcs.WebConstants.interimDocumentLibraryId, false);
         }
 
         this._meetingMaterialService.getSelects = () => {
-            return ['Id', 'AgencyName', 'IncludeWithAgenda', 'SortNumber', 'Title', 'lsoDocumentType'];
+            return ['Id', 'AgencyName', 'IncludeWithAgenda', 'SortNumber', 'Title', 'lsoDocumentType', 'FileDirRef', 'FileLeafRef', 'FSObjType'];
         };
         this._meetingMaterialService.getExpands = () => {
             return ['File'];
@@ -122,18 +122,22 @@ class Service {
 
     public getMaterials(event: ISpEvent): Promise<ISpEventMaterial[]> {
         return new Promise((resolve, reject) => {
-            if (McsUtil.isDefined(event) && McsUtil.isDefined(event.EventDocumentsLookupId)
-                && McsUtil.isArray(event.EventDocumentsLookupId) && (event.EventDocumentsLookupId as number[]).length > 0) {
-                Promise.all(McsUtil.chunkArray(event.EventDocumentsLookupId as number[], 30).map((d) => {
-                    const filter = d.map((id) => `Id eq ${id}`).join(' or ');
-                    return this._meetingMaterialService.getListItems(filter);
-                })).then((responses) => {
-                    let documentList: ISpEventMaterial[] = [];
-                    responses.forEach((d) => {
-                        documentList = documentList.concat(d);
-                    });
-                    resolve(sortBy(documentList, d => d.Id));
-                }).catch((e) => reject(e));
+            if (McsUtil.isDefined(event)) {
+                const fildname = this._isSessionEvent ? "EventSessionDocLookupId" : "EventDocumentsLookupId";
+                if (McsUtil.isDefined(event[fildname]) && McsUtil.isArray(event[fildname]) && (event[fildname] as number[]).length > 0) {
+                    Promise.all(McsUtil.chunkArray(event[fildname] as number[], 30).map((d) => {
+                        const filter = d.map((id) => `Id eq ${id}`).join(' or ');
+                        return this._meetingMaterialService.getListItems(filter);
+                    })).then((responses) => {
+                        let documentList: ISpEventMaterial[] = [];
+                        responses.forEach((d) => {
+                            documentList = documentList.concat(d);
+                        });
+                        resolve(sortBy(documentList, d => d.Id));
+                    }).catch((e) => reject(e));
+                } else {
+                    resolve([]);
+                }
             } else {
                 resolve([]);
             }
@@ -327,7 +331,12 @@ class Service {
                 if ((listTitle === Mcs.WebConstants.meetingPresenterListId) || (listTitle === this._presenterService.getListTitle())) {
                     return this._presenterService;
                 } else {
-                    return null;
+                    if ((listTitle === Mcs.WebConstants.interimDocumentLibraryId) || (listTitle === Mcs.WebConstants.sessionDocumentLibraryId) ||
+                        (listTitle === this._presenterService.getListTitle())) {
+                        return this._meetingMaterialService;
+                    } else {
+                        return null;
+                    }
                 }
             }
         }
@@ -362,12 +371,12 @@ class Service {
     private _initializeSelects(): void {
         this._eventService.getSelects = () => {
             return ['Id', 'ApprovedStatus', 'Category', 'CommitteeEventLookupId', 'CommitteeLookupId', 'CommitteeStaff', 'ConferenceNumber', 'Description',
-                'EndDate', 'EventDate', 'EventDocumentsLookupId', 'Id', 'IsBudgetHearing', 'JointEventCommitteeId', 'Location', 'MeetingStartTime',
+                'EndDate', 'EventDate', 'EventDocumentsLookupId', 'EventSessionDocLookupId', 'Id', 'IsBudgetHearing', 'JointEventCommitteeId', 'Location', 'MeetingStartTime',
                 'OtherLocationInfo', 'ParticipantsPickerId', 'Title', 'WorkAddress', 'WorkCity', 'WorkState', 'fAllDayEvent', 'fRecurrence', 'Modified'];
         };
 
         this._agendaService.getSelects = () => {
-            return ['Id', 'AgendaDate', 'AgendaDocumentsLookupId', 'AgendaNumber', 'AgendaTitle', 'AllowPublicComments', 'EventLookupId',
+            return ['Id', 'AgendaDate', 'AgendaDocumentsLookupId', 'AgendaSessionDocLookupId', 'AgendaNumber', 'AgendaTitle', 'AllowPublicComments', 'EventLookupId',
                 'ParentTopicId', 'PresentersLookupId', 'Title', 'Modified'];
         };
 
