@@ -19,7 +19,6 @@ export interface IMaterialFormProp {
 export interface IWorkingDocument {
     sortNumber: string;
     title: string;
-    agency: string;
     lsonumber: string;
     billVersion: string;
     sessionDocumentId: number;

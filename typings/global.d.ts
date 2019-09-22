@@ -6,7 +6,8 @@ declare namespace Mcs.WebConstants {
     const desktopPageUrl: string;
     const committeeCalendarListId: string;
     const agendaListId: string;
-    const meetingMaterialListId: string;
+    const interimDocumentLibraryId: string;
+    const sessionDocumentLibraryId: string;
     const meetingPresenterListId: string;
     const meetingApprovalList: string;
     const lsoServiceBase: string;

@@ -1,6 +1,7 @@
 import { ISpAgendaTopic, ISpPresenter, ISpEventMaterial } from "../interface/spmodal";
 import { McsUtil } from "../utility/helper";
 import { sortBy, cloneDeep } from '@microsoft/sp-lodash-subset';
+import { business } from ".";
 
 
 export interface IComponentAgenda extends ISpAgendaTopic {
@@ -24,8 +25,9 @@ export const tranformAgenda = (agendaList: ISpAgendaTopic[], documents: ISpEvent
             a.SubTopics = [];
             a.Presenters = [];
             a.Documents = [];
-            if (McsUtil.isArray(a.AgendaDocumentsLookupId) ) {
-                (a.AgendaDocumentsLookupId as number[]).forEach((id) => {
+            const fldname = business.get_AgendaDocumentLookupField();
+            if (McsUtil.isArray(a[fldname]) ) {
+                (a[fldname] as number[]).forEach((id) => {
                     const index = McsUtil.binarySearch(allDocuments, id, 'Id');
                     if (index >= 0) {
                         a.Documents.push(allDocuments[index]);

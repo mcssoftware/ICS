@@ -85,7 +85,7 @@ export interface ISpEvent extends IListItem {
     CommitteeStaff: string;
     ConferenceNumber: string;
     ApprovedStatus: string;
-    EventDocumentsLookupId?: number[];
+    // EventDocumentsLookupId?: number[];
     JointEventCommitteeId?: string;
     CommitteeLookupId?: number;
     CommitteeEventLookupId?: number;
@@ -99,7 +99,7 @@ export interface ISpAgendaTopic extends IListItem {
     EventLookupId: number;
     PresentersLookupId?: number[];
     ParentTopicId: number;
-    AgendaDocumentsLookupId?: number[];
+    // AgendaDocumentsLookupId?: number[];
     Presenters?: Array<ISpPresenter>;
     AllowPublicComments: boolean;
 }
@@ -118,6 +118,7 @@ export interface ISpEventMaterial extends IDocumentItem {
     lsoDocumentType: string;
     IncludeWithAgenda: boolean;
     SortNumber: number;
+    FSObjType?: number;
 }
 
 export interface IURL {

@@ -257,63 +257,86 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
      */
     private _onMaterialUploaded = (document: ISpEventMaterial, agenda: IComponentAgenda, type: OperationType): void => {
         if (McsUtil.isDefined(document)) {
-            const event = business.get_Event();
-            this.setState({ waitingMessage: "Attaching document to meeting." });
-            business.edit_Event(event.Id, event["odata.type"],
-                {
+            if (type === OperationType.Edit) {
+                const tempAgenda = cloneDeep(this.state.agendaItems);
+                let documentFound = false;
+                for (let i = 0; i < tempAgenda.length && !documentFound; i++) {
+                    const index = findIndex(tempAgenda[i].Documents || [], a => a.Id == document.Id);
+                    if (index >= 0) {
+                        documentFound = true;
+                        tempAgenda[i].Documents[index] = document;
+                        break;
+                    }
+                    for (let j = 0; j < tempAgenda[i].SubTopics.length && !documentFound; j++) {
+                        const subindex = findIndex(tempAgenda[i].SubTopics[j].Documents || [], a => a.Id == document.Id);
+                        if (subindex >= 0) {
+                            documentFound = true;
+                            tempAgenda[i].SubTopics[j].Documents[subindex] = document;
+                            break;
+                        }
+                    }
+                }
+                this.setState({ agendaItems: tempAgenda, showPanel: false, waitingMessage: '' });
+            } else {
+                this.setState({ showPanel: false, waitingMessage: 'Updating agenda and event' });
+                const event = business.get_Event();
+                this.setState({ waitingMessage: "Attaching document to meeting." });
+                const eventPropToUpdate = {};
+                const eventLookupField = business.get_EventDocumentLookupField();
+                eventPropToUpdate[eventLookupField] = {
                     __metadata: {
                         type: "Collection(Edm.Int32)"
                     },
-                    results: this._getDocumentLookupIds((McsUtil.isArray(event.EventDocumentsLookupId) ? event.EventDocumentsLookupId as number[] : []), document.Id, type)
-                }).then((e) => {
-                    if (McsUtil.isDefined(agenda)) {
-                        business.edit_Agenda(agenda.Id, agenda["odata.type"],
-                            {
+                    results: this._getDocumentLookupIds((McsUtil.isArray(event[eventLookupField]) ? event[eventLookupField] as number[] : []), document.Id, type)
+                };
+                business.edit_Event(event.Id, event["odata.type"], eventPropToUpdate)
+                    .then((e) => {
+                        if (McsUtil.isDefined(agenda)) {
+                            const agendaPropToUpdate = {};
+                            const agendaLookupField = business.get_AgendaDocumentLookupField();
+                            agendaPropToUpdate[agendaLookupField] = {
                                 __metadata: {
                                     type: "Collection(Edm.Int32)"
                                 },
-                                results: this._getDocumentLookupIds((McsUtil.isArray(agenda.AgendaDocumentsLookupId) ? agenda.AgendaDocumentsLookupId as number[] : []), document.Id, type)
-                            }).then((updatedAgenda: IComponentAgenda) => {
-                                updatedAgenda.SubTopics = [...agenda.SubTopics];
-                                updatedAgenda.Presenters = [...agenda.Presenters];
-                                updatedAgenda.Documents = [...agenda.Documents];
+                                results: this._getDocumentLookupIds((McsUtil.isArray(agenda[agendaLookupField]) ? agenda[agendaLookupField] as number[] : []), document.Id, type)
+                            };
+                            business.edit_Agenda(agenda.Id, agenda["odata.type"], agendaPropToUpdate)
+                                .then((updatedAgenda: IComponentAgenda) => {
+                                    updatedAgenda.SubTopics = [...agenda.SubTopics];
+                                    updatedAgenda.Presenters = [...agenda.Presenters];
+                                    updatedAgenda.Documents = [...agenda.Documents];
 
-                                if (type === OperationType.Delete || type === OperationType.Edit) {
-                                    const index = findIndex(updatedAgenda.Documents, a => a.Id == document.Id);
-                                    if (index > -1) {
-                                        if (type === OperationType.Edit) {
-                                            updatedAgenda.Documents[index] = document;
-                                        } else {
+                                    if (type === OperationType.Delete) {
+                                        const index = findIndex(updatedAgenda.Documents, a => a.Id == document.Id);
+                                        if (index > -1) {
                                             updatedAgenda.Documents.splice(index, 1);
                                         }
+                                    } else {
+                                        updatedAgenda.Documents.push(document);
                                     }
-                                } else {
-                                    updatedAgenda.Documents.push(document);
-                                }
-                                const tempAgenda = cloneDeep(this.state.agendaItems);
-                                let found = false;
-                                for (let i = 0; i < tempAgenda.length && !found; i++) {
-                                    if (tempAgenda[i].Id === agenda.Id) {
-                                        tempAgenda[i] = agenda;
-                                        found = true;
-                                        break;
-                                    }
-                                    for (let j = 0; j < tempAgenda[i].SubTopics.length && !found; j++) {
-                                        if (tempAgenda[i].SubTopics[j].Id == agenda.Id) {
-                                            tempAgenda[i].SubTopics[j] = agenda;
+                                    const tempAgenda = cloneDeep(this.state.agendaItems);
+                                    let found = false;
+                                    for (let i = 0; i < tempAgenda.length && !found; i++) {
+                                        if (tempAgenda[i].Id === updatedAgenda.Id) {
+                                            tempAgenda[i] = updatedAgenda;
                                             found = true;
                                             break;
                                         }
+                                        for (let j = 0; j < tempAgenda[i].SubTopics.length && !found; j++) {
+                                            if (tempAgenda[i].SubTopics[j].Id == updatedAgenda.Id) {
+                                                tempAgenda[i].SubTopics[j] = updatedAgenda;
+                                                found = true;
+                                                break;
+                                            }
+                                        }
                                     }
-                                }
-                                this.setState({ agendaItems: tempAgenda });
-                            }).catch(() => { });
-                    } else {
-                        return Promise.resolve(null);
-                    }
-                }).then();
-            // need to update event object as well.
-            this.setState({ showPanel: false, waitingMessage: '' });
+                                    this.setState({ agendaItems: tempAgenda, waitingMessage: '' });
+                                }).catch(() => { });
+                        } else {
+                            this.setState({ showPanel: false, waitingMessage: '' });
+                        }
+                    }).catch();
+            }
         } else {
             this.setState({ showPanel: false, waitingMessage: '' });
         }

@@ -1,6 +1,7 @@
 import { IDbMeeting, IDbAgenda, IDbDocument, IDbPresenter } from "../interface/dbmodal";
 import { ISpEvent, ISpAgendaTopic, ISpEventMaterial, ISpPresenter } from "../interface/spmodal";
 import { McsUtil } from "../utility/helper";
+import { business } from ".";
 
 const transformEvent = (model: ISpEvent): IDbMeeting => {
 
@@ -123,8 +124,9 @@ const transform = (webAbsoluteUrl: string, event: ISpEvent, agendaList: ISpAgend
                 lastModifiedDate = agendaModified;
             }
             agenda.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId as number[]) ? a.PresentersLookupId as number[] : [], presenterList);
-            if (McsUtil.isArray(a.AgendaDocumentsLookupId)) {
-                agenda.MeetingDocuments = (a.AgendaDocumentsLookupId as number[]).map((d) => {
+            const fldname = business.get_AgendaDocumentLookupField();
+            if (McsUtil.isArray(a[fldname])) {
+                agenda.MeetingDocuments = (a[fldname] as number[]).map((d) => {
                     const docIndex = McsUtil.binarySearch(allmaterials, d, 'Id');
                     if (docIndex < 0) {
                         return null;
@@ -151,8 +153,9 @@ const transform = (webAbsoluteUrl: string, event: ISpEvent, agendaList: ISpAgend
                     lastModifiedDate = agendaModified;
                 }
                 subTopic.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId as number[]) ? a.PresentersLookupId as number[] : [], presenterList);
-                if (McsUtil.isArray(a.AgendaDocumentsLookupId)) {
-                    subTopic.MeetingDocuments = (a.AgendaDocumentsLookupId as number[]).map((d) => {
+                const fldname = business.get_AgendaDocumentLookupField();
+                if (McsUtil.isArray(a[fldname])) {
+                    subTopic.MeetingDocuments = (a[fldname] as number[]).map((d) => {
                         const docIndex = McsUtil.binarySearch(allmaterials, d, 'Id');
                         if (docIndex < 0) {
                             return null;

@@ -1,4 +1,4 @@
-import { sortBy } from '@microsoft/sp-lodash-subset';
+import { sortBy, findIndex } from '@microsoft/sp-lodash-subset';
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { IDbCommittee, IDbStaff, IDbMembers } from "../interface/dbmodal";
 import { McsUtil } from "../utility/helper";
@@ -119,7 +119,6 @@ class BusinessLogic {
                     const startdate = new Date(this._event.EventDate);
                     return this._loadEventCommittees(startdate.getFullYear());
                 }).then(() => {
-                    service.setIsSession(this.is_SessionMeeting());
                     resolve();
                 }).catch(e => reject(e));
         });
@@ -129,9 +128,6 @@ class BusinessLogic {
         return new Promise((resolve, reject) => {
             service.editItemSpList(Mcs.WebConstants.committeeCalendarListId, false, id, listItemEntityTypeFullName, propertiesToUpdate)
                 .then((newevent: any) => {
-                    if (this._event.IsBudgetHearing !== newevent.IsBudgetHearing) {
-                        service.setIsSession(this.is_SessionMeeting());
-                    }
                     const oldjcc = JSON.stringify(this._event.JointEventCommitteeId);
                     this._event = { ...this._event, };
                     if (oldjcc !== JSON.stringify(newevent.JointEventCommitteeId)) {
@@ -148,8 +144,18 @@ class BusinessLogic {
 
     public add_Agenda(properties: any): Promise<ISpAgendaTopic> {
         return new Promise((resolve, reject) => {
-            service.addItemToSpList(Mcs.WebConstants.agendaListId, false, properties)
-                .then((newagenda: ISpAgendaTopic) => {
+            let ensureDocumentPromise: Promise<any>;
+
+            if (this._documentList.length === 0 && this._agendaList.length < 4) {
+                const startdate = new Date(this._event.EventDate);
+                ensureDocumentPromise = this._ensure_Folders(startdate.getFullYear(), undefined);
+            } else {
+                ensureDocumentPromise = Promise.resolve({});
+            }
+
+            Promise.all([ensureDocumentPromise, service.addItemToSpList(Mcs.WebConstants.agendaListId, false, properties)])
+                .then((responses) => {
+                    const newagenda: ISpAgendaTopic = responses[1] as ISpAgendaTopic;
                     this._agendaList.push(newagenda);
                     tranformAgenda(this._agendaList, this._documentList, this._presenterList);
                     resolve(newagenda);
@@ -243,13 +249,15 @@ class BusinessLogic {
      */
     public upLoad_Document(folderName: string, fileName: string, propertiesToUpdate: IDocumentItem, blob: Blob): Promise<IDocumentItem> {
         return new Promise((resolve, reject) => {
+            service.setIsSession(this.is_SessionMeeting());
             let ensureFolderCreation = Promise.resolve({});
-            const folderRelativeUrl = this._findServerRelativeUrl(folderName, this._documentFolderStructure);
-            if (this._documentList.length === 0) {
+
+            if (!McsUtil.isDefined(this._documentFolderStructure) || this._documentList.length === 0) {
                 const startdate = new Date(this._event.EventDate);
                 ensureFolderCreation = this._ensure_Folders(startdate.getFullYear(), this._event.Id);
             }
             ensureFolderCreation.then(() => {
+                const folderRelativeUrl = this._findServerRelativeUrl(folderName, this._documentFolderStructure);
                 return service.get_MaterialService().addOrUpdateDocument(folderRelativeUrl, fileName, propertiesToUpdate, blob);
             }).then((newdocument: ISpEventMaterial) => {
                 this._documentList.push(newdocument);
@@ -261,9 +269,10 @@ class BusinessLogic {
 
     public edit_Document(id: number, listItemEntityTypeFullName: string, propertiesToUpdate: any): Promise<IDocumentItem> {
         return new Promise((resolve, reject) => {
-            service.editItemSpList(Mcs.WebConstants.meetingMaterialListId, false, id, listItemEntityTypeFullName, propertiesToUpdate)
+            service.setIsSession(this.is_SessionMeeting());
+            service.editItemSpList(service.get_MaterialService().getListTitle(), false, id, listItemEntityTypeFullName, propertiesToUpdate)
                 .then((newdocument: ISpEventMaterial) => {
-                    for (let i = 0; i < this._presenterList.length; i++) {
+                    for (let i = 0; i < this._documentList.length; i++) {
                         if (this._documentList[i].Id === id) {
                             this._documentList[i] = newdocument;
                             break;
@@ -287,6 +296,27 @@ class BusinessLogic {
         return service.getBillVersion(this._currentLmsUrl, billId);
     }
 
+    public find_Document(agencyName?: string, search?: string): Promise<any[]> {
+        return new Promise((resolve, reject) => {
+            service.setIsSession(this.is_SessionMeeting());
+            service.get_MaterialService().loadList().then((listresult) => {
+                const startdate = new Date(this._event.EventDate);
+                const folderNameToSearch = McsUtil.combinePaths(listresult.RootFolder.ServerRelativeUrl, startdate.getFullYear().toString());
+                let filter = `startswith(FileDirRef, '${folderNameToSearch}')`;
+                if (McsUtil.isString(agencyName)) {
+                    filter = `${filter} and substringof('${agencyName}',AgencyName)`;
+                }
+                if (McsUtil.isString(search)) {
+                    filter = `${filter} and (substringof('${search}',FileLeafRef) or substringof('${search}',Title))`;
+                }
+                return service.get_MaterialService().getListItems(filter, null, null, null, null, 100);
+            }).then((searchResult) => {
+                const filteredSearchResult = searchResult.filter(a => a.FSObjType == 0 && (findIndex(this._documentList, d => d.Id == a.Id) < 0));
+                resolve(filteredSearchResult);
+            }).catch((e) => reject(e));
+        });
+    }
+
     public is_SessionMeeting(): boolean {
         return this._event.IsBudgetHearing;
     }
@@ -301,8 +331,24 @@ class BusinessLogic {
     public getDocumentFromIntranet(serverRelativeUrl: string, versionLabel?: string): Promise<Blob> {
         const url = McsUtil.combinePaths(Mcs.WebConstants.lmsServiceBase,
             'api/Intranet/GetIntranetDocument?&clean=true' + `&webUrl=${this._currentLmsUrl}&serverRelativeUrl=${serverRelativeUrl}` +
-                McsUtil.isString(versionLabel) ? `&version=${versionLabel}` : '');
+            (McsUtil.isString(versionLabel) ? `&version=${versionLabel}` : ''));
         return lobService.getBlob(this._config.spfxContext.serviceScope, url);
+    }
+
+    public get_EventDocumentLookupField(): string {
+        if (this.is_SessionMeeting()) {
+            return "EventSessionDocLookupId";
+        } else {
+            return "EventDocumentsLookupId";
+        }
+    }
+
+    public get_AgendaDocumentLookupField(): string {
+        if (this.is_SessionMeeting()) {
+            return "AgendaSessionDocLookupId";
+        } else {
+            return "AgendaDocumentsLookupId";
+        }
     }
 
     /**
@@ -319,7 +365,8 @@ class BusinessLogic {
             if (McsUtil.isNumberString(queryParameters.getValue("calendaritemid"))) {
                 this._eventId = parseInt(queryParameters.getValue("calendaritemid"), 10);
             }
-            Promise.all([this._loadCommitteeLinks(), this._getSiteConfiguration()])
+            this._getSiteConfiguration();
+            this._loadCommitteeLinks()
                 .then(() => {
                     return Promise.all([this._loadEvent(), this._loadAgenda()]);
                 }).then(() => {
@@ -406,6 +453,7 @@ class BusinessLogic {
         return new Promise((resolve, reject) => {
             this._documentList = [];
             if (this._eventId > 0) {
+                service.setIsSession(this.is_SessionMeeting());
                 service.getMaterials(this._event)
                     .then((result) => {
                         this._documentList = result;
@@ -609,7 +657,6 @@ class BusinessLogic {
             Description: '',
             HasLiveStream: false,
             IsBudgetHearing: false,
-            EventDocumentsLookupId: null,
             JointEventCommitteeId: null,
             Location: '',
             OtherLocationInfo: '',
@@ -628,9 +675,10 @@ class BusinessLogic {
      * @returns {Promise<any>}
      * @memberof BusinessLogic
      */
-    private _ensure_Folders(meetingYear: number, meetingId: number): Promise<any> {
+    private _ensure_Folders(meetingYear: number, meetingId?: number): Promise<any> {
         const folderStructure = this._getFolderStructure(meetingYear, meetingId);
         return new Promise((resolve, reject) => {
+            service.setIsSession(this.is_SessionMeeting());
             service.folderCreation(folderStructure)
                 .then((e) => {
                     this._documentFolderStructure = e;
@@ -643,16 +691,17 @@ class BusinessLogic {
         });
     }
 
-    private _getFolderStructure(meetingYear: number, meetingId: number): IFolderCreation {
+    private _getFolderStructure(meetingYear: number, meetingId?: number): IFolderCreation {
+        let meetingFolders;
         if (this.is_SessionMeeting()) {
-            return {
+            meetingFolders = {
                 name: meetingYear.toString(),
                 SubFolder: [
                     { name: 'Agency Budget Requests' },
                     { name: 'Agency Handouts' },
                     {
                         name: 'Bill Drafts',
-                        SubFolder: [{ name: `Bill Drafts for ${meetingId}` }]
+                        SubFolder: McsUtil.isUnsignedInt(meetingId) ? [{ name: `Bill Drafts for ${meetingId}` }] : undefined,
                     },
                     { name: 'Agency' },
                     { name: 'LSO Analysis' },
@@ -666,20 +715,35 @@ class BusinessLogic {
                     }
                 ]
             };
+            if (McsUtil.isUnsignedInt(meetingId)) {
+                meetingFolders.SubFolder.push(
+                    {
+                        name: 'Bill Drafts',
+                        SubFolder: [{ name: `Bill Drafts for ${meetingId}` }],
+                    });
+            } else {
+                meetingFolders.SubFolder.push({ name: 'Bill Drafts' });
+            }
         } else {
-            return {
+            meetingFolders = {
                 name: meetingYear.toString(),
                 SubFolder: [
                     { name: 'Correspondence' },
-                    {
-                        name: 'Meetings',
-                        SubFolder: [{ name: `Material for ${meetingId}` }]
-                    },
                     { name: 'Work Products' },
-                    { name: 'Reports' },
+                    { name: 'Reports' }
                 ]
             };
+            if (McsUtil.isUnsignedInt(meetingId)) {
+                meetingFolders.SubFolder.push(
+                    {
+                        name: 'Meetings',
+                        SubFolder: [{ name: `Material for ${meetingId}` }],
+                    });
+            } else {
+                meetingFolders.SubFolder.push({ name: 'Meetings' });
+            }
         }
+        return meetingFolders;
     }
 
     private _findServerRelativeUrl(name: string, folder: IFolderCreation): string {

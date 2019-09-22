@@ -3,3 +3,8 @@
   font-weight: 700;
   font-size: .9rem
 }
+
+:global .ms-DetailsHeader-cellSizer::after {
+  opacity: 1;
+  transition: opacity 0.3s linear 0s;
+}

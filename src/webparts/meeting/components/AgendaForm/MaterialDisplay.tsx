@@ -21,7 +21,7 @@ const materialDisplayPart: React.SFC<IMaterialDisplayProps> = (props) => {
             {McsUtil.isArray(props.material) && props.material.length > 0 && <div className={styles["card-body"]}>
                 <ul className={styles["list-group"]}>
                     {props.material.map((m) => {
-                        return (<li className={css.combine(styles["list-group-item"], styles["d-flex"])}>
+                        return (<li className={css.combine(styles["list-group-item"], styles["d-flex"], styles["p-0"])} style={{ whiteSpace: "normal" }}>
                             <Link href={m.File.ServerRelativeUrl}>{m.SortNumber} - {m.Title}</Link>
                             <div style={{ marginLeft: 'auto!important' }}>
                                 <IconButton iconProps={{ iconName: 'PageEdit' }} title="Edit" ariaLabel="Edit" onClick={() => props.onAddOrUpdateMaterial(props.agenda, m)} />

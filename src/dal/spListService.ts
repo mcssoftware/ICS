@@ -10,6 +10,7 @@ import { IDocumentItem } from "../interface/spmodal";
 export default class SpListService<T> {
     private _isListTitleGuid: boolean;
     private _webUrl: string;
+    private _listInformation: any;
 
     constructor(private _listTitle: string, private _fromRootWeb: boolean) {
         this._isListTitleGuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(_listTitle);
@@ -107,7 +108,17 @@ export default class SpListService<T> {
     }
 
     public loadList(): Promise<any> {
-        return this._getList().expand(...['RootFolder']).get();
+        return new Promise((resolve) => {
+            if (McsUtil.isDefined(this._listInformation)) {
+                resolve(this._listInformation);
+            } else {
+                this._getList().expand(...['RootFolder']).get()
+                    .then((response) => {
+                        this._listInformation = response;
+                        resolve(this._listInformation);
+                    });
+            }
+        });
     }
 
     public getFolder(sourceFolderUr: string, name: string): Promise<any[]> {

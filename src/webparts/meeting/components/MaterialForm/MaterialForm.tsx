@@ -27,7 +27,11 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
             documentId: McsUtil.isDefined(props.document) ? props.document.Id : 0,
             workingDocument: McsUtil.isDefined(props.document) ?
                 {
-                    agency: props.document.AgencyName,
+                    selectedAgency: {
+                        label: props.document.AgencyName,
+                        value: props.document.AgencyName
+                    },
+                    includeWithAgenda: props.document.IncludeWithAgenda,
                     title: props.document.Title,
                     billVersion: '',
                     lsonumber: '',
@@ -70,12 +74,12 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                         selectedKey={McsUtil.isDefined(selectedSubTopic) ? selectedSubTopic.Id.toString() : "0"}
                         onChange={this._onSubTopicSelected}
                         placeholder="Select an option"
-                        disabled={!McsUtil.isDefined(this.state.agenda)}
+                        disabled={!McsUtil.isDefined(this.state.agenda) || (documentId !== 0)}
                         options={this._getSubTopicOptions()}
                     />
                 </div>
             </div>
-            <div className={styles.row}>
+            {documentId == 0 && <div className={styles.row}>
                 <div className={styles["col-12"]}>
                     <div className={marginClassName}>
                         <Dropdown
@@ -83,7 +87,6 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                             selectedKey={documentUploadType}
                             onChange={this._onUploadTypeSelected}
                             placeholder="Select an option"
-                            disabled={documentId > 0}
                             options={[
                                 { key: DocumentUploadType.InterimDocument, text: 'Upload Document', disabled: !business.is_SessionMeeting() },
                                 { key: DocumentUploadType.LSOBill, text: 'Bills From LMS' },
@@ -91,10 +94,9 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                             ]}
                         />
                     </div>
-
                 </div>
-            </div>
-            {documentUploadType == DocumentUploadType.InterimDocument &&
+            </div>}
+            {documentId == 0 && documentUploadType == DocumentUploadType.InterimDocument &&
                 <div>
                     <div className={styles.row}>
                         <div className={styles["col-6"]}>
@@ -111,10 +113,6 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                                     onChange={this._agencySelectChange}
                                     loadOptions={this.loadAgencyOptions} />
                             </div>
-                            {/* <TextField label="Providing Agency"
-                                name="agency"
-                                className={marginClassName}
-                                value={workingDocument.agency} onChange={this._onDocTextPropertyChange} /> */}
                         </div>
                     </div>
                     <div className={styles.row}>
@@ -122,10 +120,11 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                             <Checkbox label="Include with agenda"
                                 name="includeWithAgenda"
                                 className={css.combine(marginClassName, styles["mt-3"])}
-                                checked={workingDocument.includeWithAgenda} onChange={this._onIncludeWithAgendaChange} />
+                                checked={workingDocument.includeWithAgenda}
+                                onChange={this._onIncludeWithAgendaChange} />
                         </div>
                     </div>
-                    {documentId === 0 && <div className={styles.row}>
+                    <div className={styles.row}>
                         <div className={styles["col-12"]}>
                             <TextField label="File"
                                 type="File"
@@ -136,17 +135,18 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                                 placeholder="Select file to upload ..."
                             />
                         </div>
-                    </div>}
+                    </div>
                     <div className={css.combine(styles.row, styles["mt-2"])}>
                         <div className={styles["col-6"]}>
-                            <DefaultButton text={documentId === 0 ? "Upload Document" : "Update Document"}
+                            <DefaultButton text={"Upload Document"}
                                 disabled={!this._canUploadDocument()}
+                                className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
                                 onClick={this._uploadFileToSp} />
                         </div>
                     </div>
                 </div>
             }
-            {documentUploadType == DocumentUploadType.LSOBill &&
+            {documentId == 0 && documentUploadType == DocumentUploadType.LSOBill &&
                 <div>
                     <div className={styles.row}>
                         <div className={styles["col-6"]}>
@@ -180,7 +180,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     </div>
                 </div>
             }
-            {documentUploadType == DocumentUploadType.SessionDocuments &&
+            {documentId == 0 && documentUploadType == DocumentUploadType.SessionDocuments &&
                 <div>
                     <div className={styles.row}>
                         <div className={styles["col-6"]}>
@@ -195,7 +195,10 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                         <div className={styles["col-6"]}>
                             <div className={marginClassName}>
                                 <Label>Document</Label>
-                                <AsyncSelect defaultOptions={true} />
+                                <AsyncSelect defaultOptions={true}
+                                    // value={workingDocument.selectedAgency}
+                                    // onChange={this._agencySelectChange}
+                                    loadOptions={this.loadDocumentOptions} />
                             </div>
                         </div>
                     </div>
@@ -212,6 +215,42 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     </div>
                 </div>
             }
+            {documentId != 0 && <div>
+                <div className={styles.row}>
+                    <div className={styles["col-6"]}>
+                        <TextField label="Attachment Title"
+                            name="title"
+                            className={marginClassName}
+                            value={workingDocument.title} onChange={this._onDocTextPropertyChange} />
+                    </div>
+                    <div className={styles["col-6"]}>
+                        <div className={marginClassName}>
+                            <Label>Providing Agency</Label>
+                            <AsyncSelect defaultOptions={true}
+                                value={workingDocument.selectedAgency}
+                                onChange={this._agencySelectChange}
+                                loadOptions={this.loadAgencyOptions} />
+                        </div>
+                    </div>
+                </div>
+                <div className={styles.row}>
+                    <div className={styles["col-12"]}>
+                        <Checkbox label="Include with agenda"
+                            name="includeWithAgenda"
+                            className={css.combine(marginClassName, styles["mt-3"])}
+                            checked={workingDocument.includeWithAgenda}
+                            onChange={this._onIncludeWithAgendaChange} />
+                    </div>
+                </div>
+                <div className={css.combine(styles.row, styles["mt-2"])}>
+                    <div className={styles["col-6"]}>
+                        <DefaultButton text={"Update Document"}
+                            disabled={!this._canUpdateDocument()}
+                            className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
+                            onClick={this._updateMaterial} />
+                    </div>
+                </div>
+            </div>}
             <Waiting message={waitingMessage} />
         </div>);
     }
@@ -266,10 +305,20 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
 
     private _canUploadDocument = (): boolean => {
         const { workingDocument } = this.state;
-        if (McsUtil.isString(workingDocument.title) && McsUtil.isString(workingDocument.sortNumber) && McsUtil.isString(workingDocument.agency)) {
+        if (McsUtil.isString(workingDocument.title) && McsUtil.isUnsignedInt(workingDocument.sortNumber) &&
+            McsUtil.isDefined(workingDocument.selectedAgency) && McsUtil.isString(workingDocument.selectedAgency.value)) {
             if (this.state.documentId === 0) {
                 return this.state.workingDocument.uploadFile !== null;
             }
+            return true;
+        }
+        return false;
+    }
+
+    private _canUpdateDocument = (): boolean => {
+        const { workingDocument } = this.state;
+        if (McsUtil.isString(workingDocument.title) && McsUtil.isUnsignedInt(workingDocument.sortNumber) &&
+            McsUtil.isDefined(workingDocument.selectedAgency) && McsUtil.isString(workingDocument.selectedAgency.value)) {
             return true;
         }
         return false;
@@ -292,9 +341,8 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
     }
 
     private _agencySelectChange = (value): void => {
-        const agency = McsUtil.isDefined(value) ? value.label : '';
         let { workingDocument } = this.state;
-        workingDocument = { ...workingDocument, selectedAgency: value, agency };
+        workingDocument = { ...workingDocument, selectedAgency: value };
         this.setState({ workingDocument });
     }
 
@@ -321,7 +369,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     resolve(
                         val.map(a => {
                             return {
-                                value: a.Title,
+                                value: a.AgencyName,
                                 label: a.AgencyName
                             };
                         }));
@@ -358,6 +406,21 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
 
         })
 
+    private loadDocumentOptions = (inputValue) =>
+        new Promise((resolve) => {
+            business.find_Document(inputValue)
+                .then((val) => {
+                    resolve(
+                        val.map(a => {
+                            return {
+                                value: a.Id,
+                                label: a.Title,
+                                item: a
+                            };
+                        }));
+                });
+        })
+
     private _getSubTopicOptions = (): IDropdownOption[] => {
         const options: IDropdownOption[] = [{
             key: '0',
@@ -376,7 +439,6 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
 
     private _getFormDefaultValue = (): any => {
         return {
-            agency: '',
             title: '',
             billVersion: '',
             lsonumber: '',
@@ -384,6 +446,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
             uploadFile: null,
             selectedAgency: null,
             sortNumber: this.props.sortNumber,
+            includeWithAgenda: false,
             lsoDocumentType: 'Meeting Attachments',
         };
     }
@@ -392,10 +455,10 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         const { workingDocument, agenda } = this.state;
         const uploadProperties: ISpEventMaterial = {
             lsoDocumentType: workingDocument.lsoDocumentType,
-            AgencyName: workingDocument.selectedAgency,
+            AgencyName: workingDocument.selectedAgency.label,
             Title: workingDocument.title,
             IncludeWithAgenda: workingDocument.includeWithAgenda,
-            SortNumber: McsUtil.isUnsignedInt(workingDocument.sortNumber) ? parseInt(workingDocument.sortNumber) : 1,
+            SortNumber: parseInt(workingDocument.sortNumber),
         };
         const file: File = workingDocument.uploadFile.item[0];
         this.setState({ waitingMessage: "Uploading file" });
@@ -419,7 +482,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     AgencyName: "LSO",
                     Title: selectedBill.LSONumber + " v" + selectedVersion[0].DocumentVersion + " " + selectedVersion[0].CatchTitle,
                     IncludeWithAgenda: workingDocument.includeWithAgenda,
-                    SortNumber: McsUtil.isUnsignedInt(workingDocument.sortNumber) ? parseInt(workingDocument.sortNumber) : 1,
+                    SortNumber: parseInt(workingDocument.sortNumber),
                 };
                 var filename = selectedVersion[0].FileLeafRef; // uriparts[uriparts.length - 1];
                 var lastindex = filename.lastIndexOf(".");
@@ -434,5 +497,19 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                 this.setState({ waitingMessage: "" });
                 this.props.onChange(value, agenda, OperationType.Add);
             }).catch();
+    }
+
+    private _updateMaterial = (): void => {
+        const { document } = this.props;
+        const { workingDocument, agenda } = this.state;
+        business.edit_Document(document.Id, document["odata.type"], {
+            AgencyName: workingDocument.selectedAgency.label,
+            Title: workingDocument.title,
+            IncludeWithAgenda: workingDocument.includeWithAgenda,
+            SortNumber: parseInt(workingDocument.sortNumber),
+        }).then((value: ISpEventMaterial) => {
+            this.setState({ waitingMessage: "" });
+            this.props.onChange(value, agenda, OperationType.Edit);
+        });
     }
 }
