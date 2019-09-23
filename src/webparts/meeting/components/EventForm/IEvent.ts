@@ -18,4 +18,5 @@ export interface IEventState {
   message: string;
   messageType: InformationalType;
   publishPanelOpen: boolean;
+  addCommitteePanelOpen: boolean;
 }

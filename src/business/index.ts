@@ -153,6 +153,10 @@ class BusinessLogic {
         return this._meetingCommittees;
     }
 
+    public get_CommitteeList(): ISpCommitteeLink[] {
+        return this._committeeLists;
+    }
+
     public add_Event(properties: ISpEvent): Promise<ISpEvent> {
         return new Promise((resolve, reject) => {
             service.addItemToSpList(Mcs.WebConstants.committeeCalendarListId, false, properties)

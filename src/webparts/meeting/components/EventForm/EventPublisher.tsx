@@ -60,7 +60,9 @@ export default class EventPublisher extends React.Component<IEventPublisherProps
                     label="Select Publish Type"
                     required={true}
                 />
-                <DefaultButton text="Publish" disabled={!McsUtil.isString(this.state.publishingType)} onClick={this._onPublishButtonClicked} checked={true} />
+                <DefaultButton text="Publish" style={{ marginTop: "10px" }}
+                    disabled={!McsUtil.isString(this.state.publishingType)}
+                    onClick={this._onPublishButtonClicked} checked={true} />
             </div>
         );
     }

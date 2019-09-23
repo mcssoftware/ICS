@@ -1,7 +1,7 @@
 import * as React from 'react';
 import styles from '../Meeting.module.scss';
 import { IEventProps, IEventState } from './IEvent';
-import { ChoiceGroup, TextField, DatePicker, DayOfWeek, Toggle, PrimaryButton, Label, IChoiceGroupOption, IContextualMenuProps, Panel, PanelType } from 'office-ui-fabric-react';
+import { ChoiceGroup, TextField, DatePicker, DayOfWeek, Toggle, PrimaryButton, Label, IChoiceGroupOption, Panel, PanelType } from 'office-ui-fabric-react';
 import css from '../../../../utility/css';
 import datePickerStrings from '../../../../utility/datePickerStrings';
 import Select from 'react-select';
@@ -15,6 +15,7 @@ import { Informational, InformationalType } from '../../../../controls/informati
 import { UrlQueryParameterCollection } from '@microsoft/sp-core-library';
 import IcsAppConstants from '../../../../configuration';
 import EventPublisher from "./EventPublisher";
+import AddCommittee from "./AddCommittee";
 
 export default class Event extends React.Component<IEventProps, IEventState> {
 
@@ -33,7 +34,8 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             waitingMessage: '',
             message: '',
             messageType: InformationalType.none,
-            publishPanelOpen: false
+            publishPanelOpen: false,
+            addCommitteePanelOpen: false
         };
     }
 
@@ -186,7 +188,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                         <PrimaryButton text="Save" onClick={this._saveEvent} />
                         <PrimaryButton text="Print View" onClick={this._previewMeetingNotice} />
                         <PrimaryButton text="Publish" onClick={() => this._openClosePublishPanel(true)} />
-                        <PrimaryButton text="Add committees to this meeting" />
+                        <PrimaryButton text="Add committees to this meeting" onClick={() => this._openCloseAddCommitteePanel(true)}/>
                     </div>
                 </div>
                 <div className={styles.row} style={{ marginBottom: "75px" }}>
@@ -201,6 +203,14 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                     headerText="Publish Meeting"
                     closeButtonAriaLabel="Close">
                     <EventPublisher onComplete={() => this._openClosePublishPanel(false)} />
+                </Panel>
+                <Panel
+                    isOpen={this.state.addCommitteePanelOpen}
+                    type={PanelType.smallFixedFar}
+                    onDismiss={() => this._openCloseAddCommitteePanel(false)}
+                    headerText="Add/Remove Committee to meeting"
+                    closeButtonAriaLabel="Close">
+                    <AddCommittee onComplete={() => this._openCloseAddCommitteePanel(false)} />
                 </Panel>
                 <Waiting message={waitingMessage} />
             </div>
@@ -330,6 +340,10 @@ export default class Event extends React.Component<IEventProps, IEventState> {
 
     private _openClosePublishPanel = (publishPanelOpen: boolean): void => {
         this.setState({ publishPanelOpen });
+    }
+
+    private _openCloseAddCommitteePanel = (addCommitteePanelOpen: boolean): void => {
+        this.setState({ addCommitteePanelOpen });
     }
 
     // private _publishMeeting(publishType: string): void {
