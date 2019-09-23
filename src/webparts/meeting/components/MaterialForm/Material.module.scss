@@ -1,0 +1,31 @@
+.materialDisplay {
+
+  :global .ms-DetailsHeader-cell,
+  :global .ms-DetailsRow-cell {
+    padding: 0 !important;
+  }
+
+  :global .ms-DetailsRow-fields {
+    width: 100%;
+  }
+
+  div[data-item-key="displayIndex"],
+  div[data-automation-key="displayIndex"] {
+    min-width: 16.66667% !important
+  }
+
+  div[data-item-key="agendaTitle"],
+  div[data-automation-key="agendaTitle"] {
+    min-width: 25% !important
+  }
+
+  div[data-item-key="description"],
+  div[data-automation-key="description"] {
+    min-width: 33.33333% !important
+  }
+
+  div[data-item-key="provider"],
+  div[data-automation-key="provider"] {
+    min-width: 25% !important
+  }
+}

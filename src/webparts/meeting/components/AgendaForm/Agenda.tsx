@@ -414,8 +414,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
             minWidth: 200,
             maxWidth: 300,
             onRender: (item?: IComponentAgenda, index?: number) => {
-                return (<MaterialDisplay material={item.Documents}
-                    agenda={item}
+                return (<MaterialDisplay agenda={item}
                     onAddOrUpdateMaterial={this._onMaterialDisplayBtnClicked}
                 />);
             }

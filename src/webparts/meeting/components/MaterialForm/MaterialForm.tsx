@@ -109,6 +109,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                             <div className={marginClassName}>
                                 <Label>Providing Agency</Label>
                                 <AsyncSelect defaultOptions={true}
+                                    isClearable={true}
                                     value={workingDocument.selectedAgency}
                                     onChange={this._agencySelectChange}
                                     loadOptions={this.loadAgencyOptions} />
@@ -187,6 +188,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                             <div className={marginClassName}>
                                 <Label>Providing Agency</Label>
                                 <AsyncSelect defaultOptions={true}
+                                    isClearable={true}
                                     value={workingDocument.searchSelectedAgency}
                                     onChange={this._searchAgencySelectChange}
                                     loadOptions={this.loadAgencyOptionsForSearch} />
@@ -195,7 +197,8 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                         <div className={styles["col-6"]}>
                             <div className={marginClassName}>
                                 <Label>Document</Label>
-                                <AsyncSelect defaultOptions={true}
+                                <AsyncSelect defaultOptions={false}
+                                    isClearable={true}
                                     value={workingDocument.searchSelectedDocument}
                                     onChange={this._searchDocumentSelectChange}
                                     loadOptions={this.loadDocumentOptions} />
@@ -228,6 +231,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                         <div className={marginClassName}>
                             <Label>Providing Agency</Label>
                             <AsyncSelect defaultOptions={true}
+                                isClearable={true}
                                 value={workingDocument.selectedAgency}
                                 onChange={this._agencySelectChange}
                                 loadOptions={this.loadAgencyOptions} />
@@ -320,7 +324,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         const { workingDocument } = this.state;
         const document: ISpEventMaterial = (workingDocument.searchSelectedDocument || {}).item;
         if (McsUtil.isDefined(document)) {
-            if (McsUtil.isString(document.AgencyName) || (McsUtil.isDefined(workingDocument.selectedAgency) && McsUtil.isString(workingDocument.selectedAgency.value))) {
+            if (McsUtil.isString(document.AgencyName) || (McsUtil.isDefined(workingDocument.searchSelectedAgency) && McsUtil.isString(workingDocument.searchSelectedAgency.label))) {
                 return McsUtil.isUnsignedInt(workingDocument.sortNumber);
             }
         }
@@ -328,8 +332,8 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
     }
 
     private _canUpdateDocument = (): boolean => {
-        const { workingDocument } = this.state;
-        if (McsUtil.isString(workingDocument.searchSelectedDocument) && McsUtil.isUnsignedInt(workingDocument.searchSelectedDocument.value) &&
+        const { workingDocument, documentId } = this.state;
+        if (McsUtil.isUnsignedInt(documentId) && McsUtil.isUnsignedInt(workingDocument.sortNumber) && McsUtil.isString(workingDocument.title) &&
             McsUtil.isDefined(workingDocument.selectedAgency) && McsUtil.isString(workingDocument.selectedAgency.value)) {
             return true;
         }
@@ -430,7 +434,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         })
 
     private loadBillVersionsOptions = (selectedBill: any) =>
-        new Promise((resolve) => {
+        new Promise(() => {
             if (McsUtil.isDefined(selectedBill) && selectedBill.value > 0) {
                 business.find_BillItemVersion(selectedBill.value)
                     .then((val) => {
@@ -441,7 +445,6 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                 this._billVersions = [];
                 this.setState({ loadingBillVersion: false });
             }
-
         })
 
     private loadDocumentOptions = (inputValue) =>
@@ -559,7 +562,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         const { workingDocument, agenda, selectedSubTopic } = this.state;
         const document: ISpEventMaterial = workingDocument.searchSelectedDocument.item;
         business.edit_Document(document.Id, document["odata.type"], {
-            AgencyName: workingDocument.selectedAgency.label,
+            AgencyName: McsUtil.isString(document.AgencyName) ? document.AgencyName : workingDocument.searchSelectedAgency.label,
             Title: McsUtil.isString(document.Title) ? document.Title : document.File.Name,
             IncludeWithAgenda: workingDocument.includeWithAgenda,
             SortNumber: parseInt(workingDocument.sortNumber),

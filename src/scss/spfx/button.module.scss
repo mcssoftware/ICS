@@ -2,3 +2,9 @@
 :global .ms-Toggle-background {
   min-width: 1px;
 }
+
+:global .ms-Button:disabled {
+  color: #b1b1b1 !important;
+  border-color: #e1e1e1 !important;
+  background-color: #fdfdfd !important;
+}

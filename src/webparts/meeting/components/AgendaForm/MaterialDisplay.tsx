@@ -8,7 +8,6 @@ import { IComponentAgenda } from '../../../../business/transformAgenda';
 
 export interface IMaterialDisplayProps {
     agenda: IComponentAgenda;
-    material: ISpEventMaterial[];
     onAddOrUpdateMaterial: (agenda: IComponentAgenda, item: ISpEventMaterial | null | undefined) => void;
 }
 
@@ -16,18 +15,26 @@ const uploadIcon: IIconProps = { iconName: 'CloudUpload' };
 
 const materialDisplayPart: React.SFC<IMaterialDisplayProps> = (props) => {
 
+    const displayAgendaMaterial = (agenda: IComponentAgenda, m: ISpEventMaterial) => {
+        return (<li className={css.combine(styles["list-group-item"], styles["d-flex"], styles["p-0"])} style={{ whiteSpace: "normal" }}>
+            <Link href={m.File.ServerRelativeUrl}>{m.SortNumber} - {m.Title}</Link>
+            <div style={{ marginLeft: 'auto!important' }}>
+                <IconButton iconProps={{ iconName: 'PageEdit' }} title="Edit" ariaLabel="Edit" onClick={() => props.onAddOrUpdateMaterial(agenda, m)} />
+            </div>
+        </li>);
+    };
+
     return (
         <div className={styles.card}>
-            {McsUtil.isArray(props.material) && props.material.length > 0 && <div className={styles["card-body"]}>
+            {McsUtil.isArray(props.agenda.Documents) && props.agenda.Documents.length > 0 && <div className={styles["card-body"]}>
                 <ul className={styles["list-group"]}>
-                    {props.material.map((m) => {
-                        return (<li className={css.combine(styles["list-group-item"], styles["d-flex"], styles["p-0"])} style={{ whiteSpace: "normal" }}>
-                            <Link href={m.File.ServerRelativeUrl}>{m.SortNumber} - {m.Title}</Link>
-                            <div style={{ marginLeft: 'auto!important' }}>
-                                <IconButton iconProps={{ iconName: 'PageEdit' }} title="Edit" ariaLabel="Edit" onClick={() => props.onAddOrUpdateMaterial(props.agenda, m)} />
-                            </div>
-                        </li>);
-                    })
+                    {props.agenda.Documents.map((m) => { return displayAgendaMaterial(props.agenda, m); })}
+                    {McsUtil.isArray(props.agenda.SubTopics) && props.agenda.SubTopics.length > 0 &&
+                        props.agenda.SubTopics.map((subTopic) => {
+                            return subTopic.Documents.map((doc) => {
+                                return displayAgendaMaterial(subTopic, doc);
+                            });
+                        })
                     }
                 </ul>
             </div>}

@@ -304,14 +304,14 @@ class BusinessLogic {
                 const folderNameToSearch = McsUtil.combinePaths(listresult.RootFolder.ServerRelativeUrl, startdate.getFullYear().toString());
                 let filter = `startswith(FileDirRef, '${folderNameToSearch}')`;
                 if (McsUtil.isString(agencyName)) {
-                    filter = `${filter} and substringof('${agencyName}',AgencyName)`;
+                    filter = `${filter} and substringof('${agencyName.replace("'", "''")}',AgencyName)`;
                 }
                 const tempFilter = [];
                 if (McsUtil.isString(search)) {
-                    tempFilter.push(`(substringof('${search}',FileLeafRef) or substringof('${search}',Title))`);
+                    tempFilter.push(`substringof('${search}',FileLeafRef) or substringof('${search}',Title)`);
                 }
                 if (McsUtil.isString(agencyNumber)) {
-                    tempFilter.push(`(substringof('${agencyNumber}',FileLeafRef) or substringof('${agencyNumber}',Title))`);
+                    tempFilter.push(`substringof('${agencyNumber}',FileLeafRef) or substringof('${agencyNumber}',Title)`);
                 }
                 if (tempFilter.length > 0) {
                     filter = `${filter} and (${tempFilter.join(' or ')})`;

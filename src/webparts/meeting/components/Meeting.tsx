@@ -63,6 +63,7 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
             {isLoaded && !isNewEvent && selectedTab === 'Minutes' && <div></div>}
           </div>
         </div>
+        <a href="" style={{ display: "none" }} id="noticePreview"></a>
       </div>
     );
   }

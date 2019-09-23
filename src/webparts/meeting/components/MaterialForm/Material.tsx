@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { CommandBar, DetailsList, SelectionMode, DetailsListLayoutMode, IColumn, MessageBar, MessageBarType } from 'office-ui-fabric-react';
-import { ISpEventMaterial } from "../../../../interface/spmodal";
 import { McsUtil } from '../../../../utility/helper';
-import css from '../../../../utility/css';
+import materialStyle from './Material.module.scss';
 import styles from '../Meeting.module.scss';
 import { get_eventDocuments, get_tranformAgenda } from '../../../../business/transformAgenda';
 import { sortBy } from '@microsoft/sp-lodash-subset';
@@ -114,40 +113,44 @@ const getListColumns = (): IColumn[] => {
     return [{
         name: 'Index Number',
         key: 'displayIndex',
+        fieldName: 'displayIndex',
         isSorted: false,
         isResizable: true,
-        className: styles["col-2"],
+        // className: styles["col-2"],
         minWidth: 50
     },
     {
         name: 'Agenda Item',
-        key: 'agendaItem',
+        key: 'agendaTitle',
+        fieldName: 'agendaTitle',
         isSorted: false,
         isResizable: true,
-        className: styles["col-3"],
+        // className: styles["col-3"],
         minWidth: 150,
     },
     {
         name: 'Document Description',
         key: 'description',
+        fieldName: 'description',
         isSorted: false,
         isResizable: true,
-        className: styles["col-5"],
+        // className: styles["col-4"],
         minWidth: 200,
     },
     {
         name: 'Document Provider',
         key: 'provider',
+        fieldName: 'provider',
         isSorted: false,
         isResizable: true,
-        className: styles["col-3"],
+        // className: styles["col-3"],
         minWidth: 150,
     }];
 };
 
 const materialDisplayPart: React.SFC<IMaterialProps> = (props) => {
     return (
-        <div className={styles["container-fluid"]}>
+        <div className={styles["container-fluid"] + " " + materialStyle.materialDisplay}>
             <div className={styles.row}>
                 <div className={styles["col-12"]}>
                     <MessageBar
@@ -173,7 +176,7 @@ const materialDisplayPart: React.SFC<IMaterialProps> = (props) => {
                 items={getDocuments()}
                 columns={getListColumns()}
                 selectionMode={SelectionMode.none}
-                layoutMode={DetailsListLayoutMode.justified}
+                layoutMode={DetailsListLayoutMode.fixedColumns}
                 compact={false}
                 setKey="ListViewControl" />
         </div>
