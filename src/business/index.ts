@@ -7,7 +7,10 @@ import lobService from "../dal/lobService";
 import { ISpEvent, ISpAgendaTopic, ISpCommitteeLink, ISpEventMaterial, ISpPresenter, IDocumentItem, IBillVersion } from '../interface/spmodal';
 import { UrlQueryParameterCollection } from '@microsoft/sp-core-library';
 import { tranformAgenda } from "./transformAgenda";
+import { transformSpToDb } from "./transformSpToDb";
 import { IFolderCreation } from '../dal/interface';
+import IcsAppConstants from '../configuration';
+import { BlobParser } from '../utility/parser';
 
 export interface IBusinessLogicConfig {
     spfxContext: WebPartContext;
@@ -358,6 +361,19 @@ class BusinessLogic {
         }
     }
 
+    public generateMeetingDocument(partialUrl: string): Promise<Blob> {
+        return new Promise((resolve, reject) => {
+            const dbPostObject = transformSpToDb(this._config.spfxContext.pageContext.web.absoluteUrl, this._event, this._agendaList, this._documentList, this._presenterList);
+            dbPostObject.Chairmen = this._getCommittesChairperson();
+            dbPostObject.CommitteeList = this._meetingCommittees;
+            lobService.postData(this._config.spfxContext.serviceScope, McsUtil.combinePaths(Mcs.WebConstants.icsServiceBase, partialUrl),
+                dbPostObject, "Blob", "application/json", new BlobParser())
+                .then((response) => {
+                    resolve(response);
+                }).catch((e) => reject(e));
+        });
+    }
+
     /**
      * Try to read calendar item id from query string. If event id greater than 0 then load
      * event, agenda, and committee 
@@ -560,7 +576,7 @@ class BusinessLogic {
     private _getCommitteeMembers(year: number, committeeCode: string): Promise<IDbMembers[]> {
         return new Promise((resolve, reject) => {
             lobService.getData(this._config.spfxContext.serviceScope,
-                McsUtil.combinePaths(Mcs.WebConstants.lsoServiceBase, '/api/Committees/', `${year}`, committeeCode))
+                McsUtil.combinePaths(Mcs.WebConstants.lsoServiceBase, IcsAppConstants.getCommitteesPartial(), `${year}`, committeeCode))
                 .then((response) => {
                     const sortedMembers = response.sort((a: IDbMembers, b: IDbMembers) => {
                         if (/h/gi.test(a.chamber) || /s/gi.test(a.chamber)) {
@@ -577,7 +593,7 @@ class BusinessLogic {
     private _getCommitteeStaff(year: number, committeeCode: string): Promise<IDbStaff[]> {
         return new Promise((resolve, reject) => {
             lobService.getData(this._config.spfxContext.serviceScope,
-                McsUtil.combinePaths(Mcs.WebConstants.lsoServiceBase, 'api/Calendar/Committee', `${year}`, committeeCode))
+                McsUtil.combinePaths(Mcs.WebConstants.lsoServiceBase, IcsAppConstants.getCommitteesStaffPartial(), `${year}`, committeeCode))
                 .then((response) => {
                     if (McsUtil.isArray(response.employees)) {
                         resolve(response.employees);

@@ -329,15 +329,13 @@ export class McsUtil {
         if (window.navigator.msSaveOrOpenBlob) {
             var fileData = [data];
             var blobObject = new Blob(fileData);
-            window.navigator.msSaveOrOpenBlob(blobObject, fileName);
-
+            window.navigator.msSaveOrOpenBlob(data, fileName);
         } else {
             var blob = new Blob([data]);
             var link = <any>document.getElementById("noticePreview");
-            link.href = window.URL.createObjectURL(blob);
+            link.href = window.URL.createObjectURL(data);
             link.download = fileName;
             link.click();
-            //}
         }
     }
 

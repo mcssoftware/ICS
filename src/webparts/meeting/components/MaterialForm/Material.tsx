@@ -5,6 +5,9 @@ import materialStyle from './Material.module.scss';
 import styles from '../Meeting.module.scss';
 import { get_eventDocuments, get_tranformAgenda } from '../../../../business/transformAgenda';
 import { sortBy } from '@microsoft/sp-lodash-subset';
+import { business } from '../../../../business';
+import IcsAppConstants from '../../../../configuration';
+import { Waiting } from '../../../../controls/waiting';
 
 interface IMaterialDocuments {
     sortNumber: number;
@@ -17,19 +20,9 @@ interface IMaterialDocuments {
 export interface IMaterialProps {
 }
 
-const getFarItems = () => {
-    return [
-        {
-            key: 'print',
-            name: 'Print',
-            ariaLabel: 'Print',
-            iconProps: {
-                iconName: 'Print'
-            },
-            onClick: () => console.log('Sort')
-        }
-    ];
-};
+export interface IMaterialState {
+    loading: boolean;
+}
 
 const getDocuments = (): IMaterialDocuments[] => {
     const eventDocuments: IMaterialDocuments[] = sortBy(get_eventDocuments()
@@ -109,78 +102,113 @@ const getDocuments = (): IMaterialDocuments[] => {
     return sortBy(eventDocuments, d => d.sortNumber);
 };
 
-const getListColumns = (): IColumn[] => {
-    return [{
-        name: 'Index Number',
-        key: 'displayIndex',
-        fieldName: 'displayIndex',
-        isSorted: false,
-        isResizable: true,
-        // className: styles["col-2"],
-        minWidth: 50
-    },
-    {
-        name: 'Agenda Item',
-        key: 'agendaTitle',
-        fieldName: 'agendaTitle',
-        isSorted: false,
-        isResizable: true,
-        // className: styles["col-3"],
-        minWidth: 150,
-    },
-    {
-        name: 'Document Description',
-        key: 'description',
-        fieldName: 'description',
-        isSorted: false,
-        isResizable: true,
-        // className: styles["col-4"],
-        minWidth: 200,
-    },
-    {
-        name: 'Document Provider',
-        key: 'provider',
-        fieldName: 'provider',
-        isSorted: false,
-        isResizable: true,
-        // className: styles["col-3"],
-        minWidth: 150,
-    }];
-};
+export class MaterialForm extends React.Component<IMaterialProps, IMaterialState> {
+    private _documents: IMaterialDocuments[];
 
-const materialDisplayPart: React.SFC<IMaterialProps> = (props) => {
-    return (
-        <div className={styles["container-fluid"] + " " + materialStyle.materialDisplay}>
-            <div className={styles.row}>
-                <div className={styles["col-12"]}>
-                    <MessageBar
-                        messageBarType={MessageBarType.warning}
-                        isMultiline={true}>
-                        <strong>Please Note:{' '}</strong>
-                        This index is subject to change. It will include documents submitted prior to, during and after the meeting to which it applies. The index may contain documents that were not available prior to the meeting and documents which were not considered at the meeting.{' '}
-                    </MessageBar>
-                </div>
-            </div>
-            <div className={styles.row}>
-                <div className={styles["col-12"]}>
-                    <CommandBar
-                        items={[]}
-                        overflowItems={[]}
-                        farItems={getFarItems()}
-                        ariaLabel={'Use left and right arrow keys to navigate between commands'}
-                    />
-                </div>
-            </div>
-            <DetailsList
-                key="ListViewControl"
-                items={getDocuments()}
-                columns={getListColumns()}
-                selectionMode={SelectionMode.none}
-                layoutMode={DetailsListLayoutMode.fixedColumns}
-                compact={false}
-                setKey="ListViewControl" />
-        </div>
-    );
-};
+    constructor(props: Readonly<IMaterialProps>) {
+        super(props);
+        this._documents = getDocuments();
+        this.state = {
+            loading: false
+        };
+    }
 
-export { materialDisplayPart as MaterialForm };
+    public render(): React.ReactElement<IMaterialProps> {
+        return (
+            <div className={styles["container-fluid"] + " " + materialStyle.materialDisplay}>
+                <div className={styles.row}>
+                    <div className={styles["col-12"]}>
+                        <MessageBar
+                            messageBarType={MessageBarType.warning}
+                            isMultiline={true}>
+                            <strong>Please Note:{' '}</strong>
+                            This index is subject to change. It will include documents submitted prior to, during and after the meeting to which it applies. The index may contain documents that were not available prior to the meeting and documents which were not considered at the meeting.{' '}
+                        </MessageBar>
+                    </div>
+                </div>
+                <div className={styles.row}>
+                    <div className={styles["col-12"]}>
+                        <CommandBar
+                            items={[]}
+                            overflowItems={[]}
+                            farItems={this._getFarItems()}
+                            ariaLabel={'Use left and right arrow keys to navigate between commands'}
+                        />
+                    </div>
+                </div>
+                <DetailsList
+                    key="ListViewControl"
+                    items={this._documents}
+                    columns={this._getListColumns()}
+                    selectionMode={SelectionMode.none}
+                    layoutMode={DetailsListLayoutMode.fixedColumns}
+                    compact={false}
+                    setKey="ListViewControl" />
+                {this.state.loading && <Waiting message="Generating material index" />}
+            </div>
+        );
+    }
+
+    private _getListColumns = (): IColumn[] => {
+        return [{
+            name: 'Index Number',
+            key: 'displayIndex',
+            fieldName: 'displayIndex',
+            isSorted: false,
+            isResizable: true,
+            // className: styles["col-2"],
+            minWidth: 50
+        },
+        {
+            name: 'Agenda Item',
+            key: 'agendaTitle',
+            fieldName: 'agendaTitle',
+            isSorted: false,
+            isResizable: true,
+            // className: styles["col-3"],
+            minWidth: 150,
+        },
+        {
+            name: 'Document Description',
+            key: 'description',
+            fieldName: 'description',
+            isSorted: false,
+            isResizable: true,
+            // className: styles["col-4"],
+            minWidth: 200,
+        },
+        {
+            name: 'Document Provider',
+            key: 'provider',
+            fieldName: 'provider',
+            isSorted: false,
+            isResizable: true,
+            // className: styles["col-3"],
+            minWidth: 150,
+        }];
+    }
+
+    private _getFarItems = () => {
+        return [
+            {
+                key: 'print',
+                name: 'Print',
+                ariaLabel: 'Print',
+                iconProps: {
+                    iconName: 'Print'
+                },
+                onClick: () => {
+                    this.setState({ loading: true });
+                    business.generateMeetingDocument(IcsAppConstants.getMaterialPreviewDocPartial())
+                        .then((blob) => {
+                            McsUtil.createDownloadLink("Material.pdf", blob);
+                            this.setState({ loading: false });
+                        }).catch(() => {
+                            this.setState({ loading: false });
+                        });
+                }
+            }
+        ];
+    }
+
+}

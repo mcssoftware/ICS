@@ -1,9 +1,10 @@
 import { IDbMeeting, IDbAgenda, IDbDocument, IDbPresenter } from "../interface/dbmodal";
 import { ISpEvent, ISpAgendaTopic, ISpEventMaterial, ISpPresenter } from "../interface/spmodal";
 import { McsUtil } from "../utility/helper";
-import { business } from ".";
+import { tranformAgenda, IComponentAgenda } from "./transformAgenda";
+import { sortBy } from "@microsoft/sp-lodash-subset";
 
-const transformEvent = (model: ISpEvent): IDbMeeting => {
+const transformEventDbFormat = (model: ISpEvent): IDbMeeting => {
 
     var s1 = McsUtil.convertUtcDateToLocalDate(new Date(model.EventDate));
     var s2 = model.MeetingStartTime;
@@ -32,27 +33,7 @@ const transformEvent = (model: ISpEvent): IDbMeeting => {
     return meetingData;
 };
 
-const transformAgenda = (agenda: ISpAgendaTopic, meetingId: number): IDbAgenda => {
-    var subagenda: IDbAgenda = {
-        Office365ID: agenda.Id,
-        Title: agenda.AgendaTitle,
-        SortNumber: McsUtil.isDefined(agenda.AgendaNumber) ? parseInt(agenda.AgendaNumber.toString()) : 99,
-        MeetingId: meetingId,
-        AllowPublicComments: agenda.AllowPublicComments || false,
-        MeetingDocuments: [],
-        MeetingPresenters: [],
-        SubAgendaItems: []
-    };
-    if (McsUtil.isDefined(agenda.AgendaDate)) {
-        subagenda.AgendaDate = new Date(agenda.AgendaDate as any);
-    }
-    if (agenda.ParentTopicId > 0) {
-        subagenda.ParentAgenda365Id = agenda.ParentTopicId;
-    }
-    return subagenda;
-};
-
-const transformDocument = (material: ISpEventMaterial, agenda: IDbAgenda, webAbsoluteUrl: string): IDbDocument => {
+const transformDocumentDbFormat = (material: ISpEventMaterial, agenda: IDbAgenda, webAbsoluteUrl: string): IDbDocument => {
     var model: IDbDocument = {
         Office365ID: material.Id,
         FileName: material.File.Name,
@@ -75,7 +56,7 @@ const transformDocument = (material: ISpEventMaterial, agenda: IDbAgenda, webAbs
     return model;
 };
 
-const transformPresenter = (presenter: ISpPresenter): IDbPresenter => {
+const transformPresenterDbFormat = (presenter: ISpPresenter): IDbPresenter => {
     var model: IDbPresenter = {
         Office365ID: presenter.Id,
         Title: presenter.Title,
@@ -86,12 +67,12 @@ const transformPresenter = (presenter: ISpPresenter): IDbPresenter => {
     return model;
 };
 
-const tranformPresenterList = (ids: number[], presenterList: ISpPresenter[]): IDbPresenter[] => {
+const tranformPresenterListDbFormat = (ids: number[], presenterList: ISpPresenter[]): IDbPresenter[] => {
     if (McsUtil.isArray(ids) && ids.length > 0) {
         return ids.map(a => {
             const index = McsUtil.binarySearch(presenterList, a, 'Id');
             if (index >= 0) {
-                return transformPresenter(presenterList[index]);
+                return transformPresenterDbFormat(presenterList[index]);
             } else {
                 return null;
             }
@@ -100,6 +81,27 @@ const tranformPresenterList = (ids: number[], presenterList: ISpPresenter[]): ID
     return [];
 };
 
+const transformAgendaDbFormat = (webAbsoluteUrl: string, agenda: IComponentAgenda, meetingId: number): IDbAgenda => {
+    var subagenda: IDbAgenda = {
+        Office365ID: agenda.Id,
+        Title: agenda.AgendaTitle,
+        SortNumber: McsUtil.isDefined(agenda.AgendaNumber) ? parseInt(agenda.AgendaNumber.toString()) : 99,
+        MeetingId: meetingId,
+        AllowPublicComments: agenda.AllowPublicComments || false,
+        MeetingDocuments: [],
+        MeetingPresenters: [],
+        SubAgendaItems: []
+    };
+    if (McsUtil.isDefined(agenda.AgendaDate)) {
+        subagenda.AgendaDate = new Date(agenda.AgendaDate as any);
+    }
+    if (agenda.ParentTopicId > 0) {
+        subagenda.ParentAgenda365Id = agenda.ParentTopicId;
+    }
+    subagenda.MeetingDocuments = agenda.Documents.map((d) => transformDocumentDbFormat(d, subagenda, webAbsoluteUrl));
+    subagenda.MeetingPresenters = tranformPresenterListDbFormat(agenda.PresentersLookupId, agenda.Presenters);
+    return subagenda;
+};
 
 /**
  * Transform Sharepoint list items to DB format for publishing
@@ -110,66 +112,41 @@ const tranformPresenterList = (ids: number[], presenterList: ISpPresenter[]): ID
  * @param {ISpEventMaterial[]} material list of documents sorted by ID
  * @param {ISpPresenter[]} presenter list of presenter sorted by ID
  */
-const transform = (webAbsoluteUrl: string, event: ISpEvent, agendaList: ISpAgendaTopic[], materialList: ISpEventMaterial[], presenterList: ISpPresenter[]): IDbMeeting => {
-    const modal = transformEvent(event);
-    const allmaterials: ISpEventMaterial[] = [...materialList];
+export const transformSpToDb = (webAbsoluteUrl: string, event: ISpEvent, agendaList: ISpAgendaTopic[], materialList: ISpEventMaterial[], presenterList: ISpPresenter[]): IDbMeeting => {
+    debugger;
+    const modal = transformEventDbFormat(event);
     let lastModifiedDate = new Date(event.Modified as string);
-    // get only TOPIC
-    const mainTopics: IDbAgenda[] = agendaList.filter(a => !McsUtil.isNumeric(a.ParentTopicId))
-        .map((a) => {
-            const agenda = transformAgenda(a, event.Id);
-            //update last mofied if agenda was modified
-            var agendaModified = new Date(a.Modified as string);
-            if (agendaModified > lastModifiedDate) {
-                lastModifiedDate = agendaModified;
+
+    const allmaterials = sortBy(materialList, a => a.Id);
+
+    const tempAgenda = tranformAgenda(agendaList, materialList, presenterList);
+    modal.MeetingAgendas = tempAgenda.map((a): IDbAgenda => {
+        const newAgenda = transformAgendaDbFormat(webAbsoluteUrl, a, event.Id);
+        var agendaModified = new Date(a.Modified as string);
+        if (agendaModified > lastModifiedDate) {
+            lastModifiedDate = agendaModified;
+        }
+        a.Documents.forEach((d) => {
+            const docIndex = McsUtil.binarySearch(allmaterials, d.Id, 'Id');
+            if (docIndex >= 0) {
+                // remove document form list if processed
+                allmaterials.splice(docIndex, 1);
             }
-            agenda.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId as number[]) ? a.PresentersLookupId as number[] : [], presenterList);
-            const fldname = business.get_AgendaDocumentLookupField();
-            if (McsUtil.isArray(a[fldname])) {
-                agenda.MeetingDocuments = (a[fldname] as number[]).map((d) => {
-                    const docIndex = McsUtil.binarySearch(allmaterials, d, 'Id');
-                    if (docIndex < 0) {
-                        return null;
-                    } else {
-                        // remove document form list if processed
-                        const doc = allmaterials.splice(docIndex, 1);
-                        return transformDocument(doc[0], agenda, webAbsoluteUrl);
-                    }
-                }).filter(d => McsUtil.isDefined(d));
-            }
-            return agenda;
+        });
+        newAgenda.SubAgendaItems = a.SubTopics.map((s) => {
+            s.Documents.forEach((d1) => {
+                const docIndex = McsUtil.binarySearch(allmaterials, d1.Id, 'Id');
+                if (docIndex >= 0) {
+                    // remove document form list if processed
+                    allmaterials.splice(docIndex, 1);
+                }
+            });
+            return transformAgendaDbFormat(webAbsoluteUrl, s, event.Id);
         });
 
-    // handle all subtopic
-    agendaList.filter(a => McsUtil.isNumeric(a.ParentTopicId) && a.ParentTopicId > 0)
-        .forEach(a => {
-            // find parent item
-            const index = McsUtil.binarySearch(mainTopics, a.ParentTopicId, 'Id');
-            if (index >= 0) {
-                const subTopic = transformAgenda(a, event.Id);
-                //update last mofied if subtop was modified
-                var agendaModified = new Date(a.Modified as string);
-                if (agendaModified > lastModifiedDate) {
-                    lastModifiedDate = agendaModified;
-                }
-                subTopic.MeetingPresenters = tranformPresenterList(McsUtil.isArray(a.PresentersLookupId as number[]) ? a.PresentersLookupId as number[] : [], presenterList);
-                const fldname = business.get_AgendaDocumentLookupField();
-                if (McsUtil.isArray(a[fldname])) {
-                    subTopic.MeetingDocuments = (a[fldname] as number[]).map((d) => {
-                        const docIndex = McsUtil.binarySearch(allmaterials, d, 'Id');
-                        if (docIndex < 0) {
-                            return null;
-                        } else {
-                            // remove document form list if processed
-                            const doc = allmaterials.splice(docIndex, 1);
-                            return transformDocument(doc[0], subTopic, webAbsoluteUrl);
-                        }
-                    }).filter(d => McsUtil.isDefined(d));
-                }
-                mainTopics[index].SubAgendaItems.push(subTopic);
-            }
-        });
+        return newAgenda;
+    });
+    modal.LastUpdated = lastModifiedDate;
+    modal.MeetingDocuments = allmaterials.map(m => transformDocumentDbFormat(m, null, webAbsoluteUrl));
     return modal;
 };
-
-export default transform;

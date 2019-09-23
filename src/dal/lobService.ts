@@ -2,16 +2,15 @@ import { AadHttpClient, IHttpClientOptions, HttpClientResponse } from "@microsof
 import { ServiceScope } from "@microsoft/sp-core-library";
 import { IODataParser, BlobParser, ODataDefaultParser } from "../utility/parser";
 import { McsUtil } from "../utility/helper";
+import IcsAppConstants from "../configuration";
 // import { McsUtil, ODataDefaultParser, IODataParser, BlobParser } from "mcs-lms-core";
 
 export interface ILobService {
     getData(serviceScope: ServiceScope, url: string, parser?: IODataParser<any>): Promise<any>;
     getBlob(serviceScope: ServiceScope, url: string, parser?: BlobParser): Promise<any>;
-    postData(serviceScope: ServiceScope, url: string, data: any, contentType?: string, parser?: IODataParser<any>, headers?: Headers): Promise<any>;
+    postData(serviceScope: ServiceScope, url: string, data: any, responseType?: string, contentType?: string, parser?: IODataParser<any>, headers?: Headers): Promise<any>;
     putData(serviceScope: ServiceScope, url: string, data: any, contentType?: string, parser?: IODataParser<any>): Promise<any>;
 }
-
-const azureServiceUrl:string = 'https://WYOLEG.GOV/LsoOffice365Service';
 
 class LobService implements ILobService {
 
@@ -20,7 +19,7 @@ class LobService implements ILobService {
             // create an AadHttpClient object to consume the 3rd party API
             const aadClient: AadHttpClient = new AadHttpClient(
                 serviceScope,
-                azureServiceUrl
+                IcsAppConstants.getazureServiceUrl()
             );
             const requestHeaders: Headers = new Headers();
             requestHeaders.append("Accept", "application/json");
@@ -49,7 +48,7 @@ class LobService implements ILobService {
             // create an AadHttpClient object to consume the 3rd party API
             const aadClient: AadHttpClient = new AadHttpClient(
                 serviceScope,
-                azureServiceUrl
+                IcsAppConstants.getazureServiceUrl()
             );
             const requestHeaders: Headers = new Headers();
             requestHeaders.append("Accept", "application/json");
@@ -73,16 +72,19 @@ class LobService implements ILobService {
         });
     }
 
-    public postData(serviceScope: ServiceScope, url: string, data: any, contentType: string = "application/json",
+    public postData(serviceScope: ServiceScope, url: string, data: any, responseType?: string, contentType: string = "application/json",
         parser: IODataParser<any> = new ODataDefaultParser(), headers?: Headers): Promise<any> {
         return new Promise((resolve, reject) => {
             // create an AadHttpClient object to consume the 3rd party API
             const aadClient: AadHttpClient = new AadHttpClient(
                 serviceScope,
-                azureServiceUrl
+                IcsAppConstants.getazureServiceUrl()
             );
             let requestHeaders: Headers = new Headers();
-            requestHeaders.append("Accept", "application/json");
+            if (!McsUtil.isString(responseType)) {
+                requestHeaders.append("Accept", "application/json");
+            }
+
             requestHeaders.append("Content-Type", McsUtil.isString(contentType) ? contentType : "application/json");
             if (McsUtil.isDefined(headers)) {
                 requestHeaders = headers;
@@ -91,7 +93,9 @@ class LobService implements ILobService {
                 headers: requestHeaders,
                 body: JSON.stringify(data),
             };
-
+            // if (McsUtil.isString(responseType)) {
+            //     (requestOptions as any).responseType = responseType;
+            // }
             aadClient.post(
                 url,
                 AadHttpClient.configurations.v1,
@@ -116,7 +120,7 @@ class LobService implements ILobService {
             // create an AadHttpClient object to consume the 3rd party API
             const aadClient: AadHttpClient = new AadHttpClient(
                 serviceScope,
-                azureServiceUrl
+                IcsAppConstants.getazureServiceUrl()
             );
             const requestHeaders: Headers = new Headers();
             requestHeaders.append("Accept", "application/json");
