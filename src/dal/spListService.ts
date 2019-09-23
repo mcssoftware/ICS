@@ -122,7 +122,7 @@ export default class SpListService<T> {
     }
 
     public getFolder(sourceFolderUr: string, name: string): Promise<any[]> {
-        return this._getWeb().getFolderByServerRelativePath(sourceFolderUr).folders
+        return this.getWeb().getFolderByServerRelativePath(sourceFolderUr).folders
             .filter(`Name eq '${name}'`)
             .select('ServerRelativeUrl')
             .get();
@@ -130,7 +130,7 @@ export default class SpListService<T> {
 
     public createFolder(serverRelativeUrl: string, foldername: string): Promise<FolderAddResult> {
         return new Promise((resolve, reject) => {
-            this._getWeb()
+            this.getWeb()
                 .getFolderByServerRelativeUrl(serverRelativeUrl)
                 .folders
                 .add(foldername)
@@ -141,7 +141,7 @@ export default class SpListService<T> {
 
     public addOrUpdateDocument(folderServerRelativeUrl: string, fileName: string, propertiesToUpdate: IDocumentItem, blob: Blob): Promise<IDocumentItem> {
         return new Promise<IDocumentItem>((resolve, reject) => {
-            this._getWeb().getFolderByServerRelativePath(folderServerRelativeUrl).files.add(fileName, blob, true)
+            this.getWeb().getFolderByServerRelativePath(folderServerRelativeUrl).files.add(fileName, blob, true)
                 .then((fileAdded: FileAddResult) => {
                     fileAdded.file.getItem().then((item: Item) => {
                         item.update(propertiesToUpdate).then((value: ItemUpdateResult) => {
@@ -229,7 +229,7 @@ export default class SpListService<T> {
         });
     }
 
-    private _getWeb(): Web {
+    public getWeb(): Web {
         if (McsUtil.isDefined(this._webUrl)) {
             return new Web(this._webUrl);
         } else {
@@ -242,9 +242,9 @@ export default class SpListService<T> {
 
     private _getList(): List {
         if (this._isListTitleGuid) {
-            return this._getWeb().lists.getById(this._listTitle);
+            return this.getWeb().lists.getById(this._listTitle);
         }
-        return this._getWeb().lists.getByTitle(this._listTitle);
+        return this.getWeb().lists.getByTitle(this._listTitle);
     }
 
     private _getNextPages(paged: PagedItemCollection<any>, items: T[]): Promise<T[]> {

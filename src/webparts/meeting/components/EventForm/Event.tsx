@@ -1,7 +1,7 @@
 import * as React from 'react';
 import styles from '../Meeting.module.scss';
 import { IEventProps, IEventState } from './IEvent';
-import { ChoiceGroup, TextField, DatePicker, DayOfWeek, Toggle, PrimaryButton, Label, IChoiceGroupOption } from 'office-ui-fabric-react';
+import { ChoiceGroup, TextField, DatePicker, DayOfWeek, Toggle, PrimaryButton, Label, IChoiceGroupOption, IContextualMenuProps, Panel, PanelType } from 'office-ui-fabric-react';
 import css from '../../../../utility/css';
 import datePickerStrings from '../../../../utility/datePickerStrings';
 import Select from 'react-select';
@@ -13,6 +13,8 @@ import { business } from '../../../../business';
 import { Waiting } from '../../../../controls/waiting';
 import { Informational, InformationalType } from '../../../../controls/informational';
 import { UrlQueryParameterCollection } from '@microsoft/sp-core-library';
+import IcsAppConstants from '../../../../configuration';
+import EventPublisher from "./EventPublisher";
 
 export default class Event extends React.Component<IEventProps, IEventState> {
 
@@ -30,7 +32,8 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             isDirty: false,
             waitingMessage: '',
             message: '',
-            messageType: InformationalType.none
+            messageType: InformationalType.none,
+            publishPanelOpen: false
         };
     }
 
@@ -181,16 +184,24 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                 <div className={styles.row}>
                     <div className={css.combine(styles["col-12"], styles["d-flex"], styles["justify-content-around"], styles["mt-2"])}>
                         <PrimaryButton text="Save" onClick={this._saveEvent} />
-                        <PrimaryButton text="Print View" />
-                        <PrimaryButton text="Publish" />
+                        <PrimaryButton text="Print View" onClick={this._previewMeetingNotice} />
+                        <PrimaryButton text="Publish" onClick={() => this._openClosePublishPanel(true)} />
                         <PrimaryButton text="Add committees to this meeting" />
                     </div>
                 </div>
-                <div className={styles.row}>
+                <div className={styles.row} style={{ marginBottom: "75px" }}>
                     <div className={styles["col-sm-12"]}>
                         <Informational message={this.state.message} type={this.state.messageType} />
                     </div>
                 </div>
+                <Panel
+                    isOpen={this.state.publishPanelOpen}
+                    type={PanelType.smallFixedFar}
+                    onDismiss={() => this._openClosePublishPanel(false)}
+                    headerText="Publish Meeting"
+                    closeButtonAriaLabel="Close">
+                    <EventPublisher onComplete={() => this._openClosePublishPanel(false)} />
+                </Panel>
                 <Waiting message={waitingMessage} />
             </div>
         );
@@ -299,4 +310,65 @@ export default class Event extends React.Component<IEventProps, IEventState> {
 
         }).catch(() => { });
     }
+
+    private _previewMeetingNotice = (): void => {
+        const file = business.get_DocumentByType("Meeting Notice");
+        if (McsUtil.isDefined(file)) {
+            var win = window.open(file.File.LinkingUrl, '_blank');
+            win.focus();
+        } else {
+            this.setState({ waitingMessage: 'Generating meeting notice (PREVIEW)' });
+            business.generateMeetingDocument(IcsAppConstants.getCreateMeetingNoticePartial())
+                .then((blob) => {
+                    McsUtil.createDownloadLink("MeetingNotice.pdf", blob);
+                    this.setState({ waitingMessage: '' });
+                }).catch(() => {
+                    this.setState({ waitingMessage: '' });
+                });
+        }
+    }
+
+    private _openClosePublishPanel = (publishPanelOpen: boolean): void => {
+        this.setState({ publishPanelOpen });
+    }
+
+    // private _publishMeeting(publishType: string): void {
+    //     if (McsUtil.isString(publishType)) {
+    //         this.setState({ waitingMessage: 'Publishing meeting' });
+    //         const dataToPost = business.get_publishingMeeting();
+    //         Promise.all([business.generateMeetingDocument(IcsAppConstants.getCreateMeetingNoticePartial(), dataToPost),
+    //         business.generateMeetingDocument(IcsAppConstants.getCreateAgendaPreviewPartial(), dataToPost)
+    //         ])
+    //             .then();
+    //     }
+    // }
+
+    // private _getPublishContextualMenu = (): IContextualMenuProps => {
+    //     const menuProps: IContextualMenuProps = {
+    //         items: [
+    //             {
+    //                 key: 'Tentative',
+    //                 text: 'Publish Tentative Meeting Notice',
+    //             },
+    //             {
+    //                 key: 'FormalMeetingNotice',
+    //                 text: 'First Formal Meeting Notice for Director Approval',
+    //             },
+    //             {
+    //                 key: 'FormalAgenda',
+    //                 text: 'First Formal Meeting Notice & Agenda for Director Approval',
+    //             },
+    //             {
+    //                 key: 'MeetingNotice',
+    //                 text: 'Update Meeting Notice',
+    //             },
+    //             {
+    //                 key: 'Agenda',
+    //                 text: 'Update Meeting Notice & Agenda',
+    //             }
+    //         ],
+    //         directionalHintFixed: true
+    //     };
+    //     return menuProps;
+    // }
 }

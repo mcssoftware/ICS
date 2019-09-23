@@ -1,6 +1,6 @@
 import { sortBy, findIndex } from '@microsoft/sp-lodash-subset';
 import { WebPartContext } from "@microsoft/sp-webpart-base";
-import { IDbCommittee, IDbStaff, IDbMembers } from "../interface/dbmodal";
+import { IDbCommittee, IDbStaff, IDbMembers, IDbMeeting } from "../interface/dbmodal";
 import { McsUtil } from "../utility/helper";
 import service from "../dal/service";
 import lobService from "../dal/lobService";
@@ -56,6 +56,10 @@ class BusinessLogic {
         this._initialize();
     }
 
+    public getWebUrl(): string {
+        return this._config.spfxContext.pageContext.web.absoluteUrl;
+    }
+
     /**
      * Wait for data to load
      * @param {() => void} callback
@@ -67,6 +71,31 @@ class BusinessLogic {
         } else {
             this._callbackOnLoaded.push(callback);
         }
+    }
+
+    public loadEvent(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (this._eventId > 0) {
+                service.getEvent(this._eventId).then((value) => {
+                    let hasParentCommittee = false;
+                    if (McsUtil.isNumeric(value.CommitteeEventLookupId) && value.CommitteeEventLookupId > 0 &&
+                        McsUtil.isNumeric(value.CommitteeLookupId) && value.CommitteeLookupId > 0) {
+                        const parentCommittee = this._committeeLists.filter(c => c.Id === value.CommitteeLookupId);
+                        if (parentCommittee.length > 0) {
+                            hasParentCommittee = true;
+                            var url = parentCommittee[0].URL.Url + "/" + parentCommittee[0].CommitteeDesktopUrl + "?calendarItemId=" + value.CommitteeEventLookupId;
+                            window.location.href = url;
+                        }
+                    } else {
+                        this._event = value;
+                        resolve();
+                    }
+                }).catch((e) => reject(e));
+            } else {
+                this._event = this._getDefaultEvent();
+                resolve();
+            }
+        });
     }
 
     /**
@@ -97,6 +126,17 @@ class BusinessLogic {
      */
     public get_Documents(): ISpEventMaterial[] {
         return this._documentList;
+    }
+
+    /**
+     * Get event document by type
+     *
+     * @returns {ISpEventMaterial[]}
+     * @memberof BusinessLogic
+     */
+    public get_DocumentByType(documenttype: string): ISpEventMaterial {
+        const filterDoc = this._documentList.filter(a => a.lsoDocumentType == documenttype);
+        return filterDoc.length > 0 ? filterDoc[0] : null;
     }
 
     /**
@@ -361,17 +401,47 @@ class BusinessLogic {
         }
     }
 
-    public generateMeetingDocument(partialUrl: string): Promise<Blob> {
+    public generateMeetingDocument(partialUrl: string, data?: IDbMeeting): Promise<Blob> {
         return new Promise((resolve, reject) => {
-            const dbPostObject = transformSpToDb(this._config.spfxContext.pageContext.web.absoluteUrl, this._event, this._agendaList, this._documentList, this._presenterList);
-            dbPostObject.Chairmen = this._getCommittesChairperson();
-            dbPostObject.CommitteeList = this._meetingCommittees;
+            if (!McsUtil.isDefined(data)) {
+                data = this.get_publishingMeeting();
+            }
             lobService.postData(this._config.spfxContext.serviceScope, McsUtil.combinePaths(Mcs.WebConstants.icsServiceBase, partialUrl),
-                dbPostObject, "Blob", "application/json", new BlobParser())
+                data, "Blob", "application/json", new BlobParser())
                 .then((response) => {
                     resolve(response);
                 }).catch((e) => reject(e));
         });
+    }
+
+    public get_publishingMeeting(): IDbMeeting {
+        const dbPostObject = transformSpToDb(this._config.spfxContext.pageContext.web.absoluteUrl, this._event, this._agendaList, this._documentList, this._presenterList);
+        dbPostObject.Chairmen = this._getCommittesChairperson();
+        dbPostObject.CommitteeList = this._meetingCommittees;
+        return dbPostObject;
+    }
+
+    public publishDocument(item: IDocumentItem): Promise<void> {
+        return new Promise((resolve) => {
+            if (McsUtil.isDefined(item) && item.File.CheckOutType !== 2) {
+                service.approveFile(item.File.ServerRelativeUrl, "publish(comment='auto publish file')", "approve(comment='auto approve file')")
+                    .then(() => {
+                        return service.get_MaterialService().getListItemById(item.Id);
+                    }).then((newitem) => {
+                        const index = findIndex(this._documentList, d => d.Id == item.Id);
+                        this._documentList[index] = newitem;
+                        resolve();
+                    }).catch(() => {
+                        resolve();
+                    });
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    public get_MeetingApprovalListService() {
+        return service.get_MeetingApprovalListService();
     }
 
     /**
@@ -391,7 +461,7 @@ class BusinessLogic {
             this._getSiteConfiguration();
             this._loadCommitteeLinks()
                 .then(() => {
-                    return Promise.all([this._loadEvent(), this._loadAgenda()]);
+                    return Promise.all([this.loadEvent(), this._loadAgenda()]);
                 }).then(() => {
                     const startdate = new Date(this._event.EventDate);
                     return Promise.all([this._loadIntrimDocuments(), this._loadPresenters(), this._loadEventCommittees(startdate.getFullYear())]);
@@ -424,31 +494,6 @@ class BusinessLogic {
                         cb(e);
                     }
                 });
-        });
-    }
-
-    private _loadEvent(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            if (this._eventId > 0) {
-                service.getEvent(this._eventId).then((value) => {
-                    let hasParentCommittee = false;
-                    if (McsUtil.isNumeric(value.CommitteeEventLookupId) && value.CommitteeEventLookupId > 0 &&
-                        McsUtil.isNumeric(value.CommitteeLookupId) && value.CommitteeLookupId > 0) {
-                        const parentCommittee = this._committeeLists.filter(c => c.Id === value.CommitteeLookupId);
-                        if (parentCommittee.length > 0) {
-                            hasParentCommittee = true;
-                            var url = parentCommittee[0].URL.Url + "/" + parentCommittee[0].CommitteeDesktopUrl + "?calendarItemId=" + value.CommitteeEventLookupId;
-                            window.location.href = url;
-                        }
-                    } else {
-                        this._event = value;
-                        resolve();
-                    }
-                }).catch((e) => reject(e));
-            } else {
-                this._event = this._getDefaultEvent();
-                resolve();
-            }
         });
     }
 

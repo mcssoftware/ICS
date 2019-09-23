@@ -40,7 +40,7 @@ class Service {
         }
 
         this._meetingMaterialService.getSelects = () => {
-            return ['Id', 'AgencyName', 'IncludeWithAgenda', 'SortNumber', 'Title', 'lsoDocumentType', 'FileDirRef', 'FileLeafRef', 'FSObjType'];
+            return ['Id', 'AgencyName', 'IncludeWithAgenda', 'SortNumber', 'Title', 'lsoDocumentType', 'FileDirRef', 'FileLeafRef', 'FSObjType', 'Modified'];
         };
         this._meetingMaterialService.getExpands = () => {
             return ['File'];
@@ -321,6 +321,10 @@ class Service {
         return this._meetingMaterialService;
     }
 
+    public get_MeetingApprovalListService(): SpListService<any> {
+        return new SpListService<any>(Mcs.WebConstants.meetingApprovalList, true);
+    }
+
     public get_SpService(listTitle: string): SpListService<any> {
         if ((listTitle === Mcs.WebConstants.committeeCalendarListId) || (listTitle === this._eventService.getListTitle())) {
             return this._eventService;
@@ -340,6 +344,17 @@ class Service {
                 }
             }
         }
+    }
+
+    public approveFile(fileServerRelativeUrl: string, publishComment: string, approveComment: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.get_MaterialService().getWeb().getFileByServerRelativeUrl(fileServerRelativeUrl).checkin(publishComment)
+                .then(() => {
+                    return this.get_MaterialService().getWeb().getFileByServerRelativeUrl(fileServerRelativeUrl).approve(approveComment);
+                }).then(() => {
+                    resolve();
+                }).catch(e => reject(e));
+        });
     }
 
     private _folderCreation(folderServerUrl: string, folderStructure: IFolderCreation): Promise<IFolderCreation> {

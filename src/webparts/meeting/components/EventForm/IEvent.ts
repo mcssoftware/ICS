@@ -17,4 +17,5 @@ export interface IEventState {
   waitingMessage: string;
   message: string;
   messageType: InformationalType;
+  publishPanelOpen: boolean;
 }

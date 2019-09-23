@@ -15,6 +15,7 @@ import MaterialForm from '../MaterialForm/MaterialForm';
 import { findIndex, cloneDeep } from '@microsoft/sp-lodash-subset';
 import { business } from '../../../../business';
 import { Informational, InformationalType } from '../../../../controls/informational';
+import IcsAppConstants from '../../../../configuration';
 
 export default class Agenda extends React.Component<IAgendaProps, IAgendaState> {
 
@@ -54,7 +55,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                         <CommandBar
                             items={this._getCommandBarItems(agendaSelected, orderChanged)}
                             overflowItems={[]}
-                            farItems={[]}
+                            farItems={this._getFarItems()}
                             ariaLabel={'Use left and right arrow keys to navigate between commands'}
                         />
                     </div>
@@ -173,7 +174,6 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
 
         this.setState({ agendaItems: items, orderChanged: true });
     }
-
 
     private _onNewAgendaAddedOrEdited = (topic: IComponentAgenda, parentTopicId?: number): void => {
         const agendaCopy = [...this.state.agendaItems];
@@ -471,6 +471,29 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 disabled: !orderChanged,
                 onClick: () => {
                     this._saveAgendaNumber();
+                }
+            }
+        ];
+    }
+
+    private _getFarItems = () => {
+        return [
+            {
+                key: 'print',
+                name: 'Print',
+                ariaLabel: 'Print',
+                iconProps: {
+                    iconName: 'Print'
+                },
+                onClick: () => {
+                    this.setState({ waitingMessage: 'Generating agenda (PREVIEW)' });
+                    business.generateMeetingDocument(IcsAppConstants.getCreateAgendaPreviewPartial())
+                        .then((blob) => {
+                            McsUtil.createDownloadLink("Agenda.pdf", blob);
+                            this.setState({ waitingMessage: '' });
+                        }).catch(() => {
+                            this.setState({ waitingMessage: '' });
+                        });
                 }
             }
         ];
