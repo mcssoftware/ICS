@@ -9,6 +9,7 @@ import { business } from '../../../business';
 import { McsUtil } from '../../../utility/helper';
 import { MaterialForm } from './MaterialForm/Material';
 import { Waiting } from '../../../controls/waiting';
+import { MinuteForm } from "./MinuteForm/MinuteForm";
 
 export default class Meeting extends React.Component<IMeetingProps, IMeetingState> {
 
@@ -60,7 +61,7 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
             {isLoaded && !isNewEvent && selectedTab === 'Agenda' &&
               <Agenda minDate={minDate} maxDate={maxDate} eventLookupId={event.Id} />}
             {isLoaded && !isNewEvent && selectedTab === 'Materials' && <MaterialForm />}
-            {isLoaded && !isNewEvent && selectedTab === 'Minutes' && <div></div>}
+            {isLoaded && !isNewEvent && selectedTab === 'Minutes' && <MinuteForm event={event} />}
           </div>
         </div>
         <a href="" style={{ display: "none" }} id="noticePreview"></a>
@@ -118,7 +119,7 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
       {
         key: 'Minutes',
         text: 'Minutes',
-        disabled: true
+        disabled: isNewEvent
       }
     ];
     return topNavList;

@@ -14,16 +14,18 @@ import { ISpEventMaterial, OperationType, IBillVersion } from '../../../../inter
 export default class MaterialForm extends React.Component<IMaterialFormProp, IMaterialFormState> {
 
     private _billVersions: IBillVersion[];
+    private _enableDocumentAttachment: boolean;
 
     constructor(props: Readonly<IMaterialFormProp>) {
         super(props);
         this._billVersions = [];
+        this._enableDocumentAttachment = business.can_CreateBudgetMeeting();
         this.state = {
             selectedSubTopic: null,
             loadingBillVersion: false,
             // workingDoc: McsUtil.isDefined(props.document) ? { ...props.document } : {} as ISpEventMaterial,
             agenda: props.requireAgendaSelection ? null : (McsUtil.isArray(props.agenda) && props.agenda.length == 1 ? props.agenda[0] : null),
-            documentUploadType: business.is_SessionMeeting() ? DocumentUploadType.SessionDocuments : DocumentUploadType.InterimDocument,
+            documentUploadType: this._enableDocumentAttachment ? DocumentUploadType.SessionDocuments : DocumentUploadType.InterimDocument,
             documentId: McsUtil.isDefined(props.document) ? props.document.Id : 0,
             workingDocument: McsUtil.isDefined(props.document) ?
                 {
@@ -88,9 +90,9 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                             onChange={this._onUploadTypeSelected}
                             placeholder="Select an option"
                             options={[
-                                { key: DocumentUploadType.InterimDocument, text: 'Upload Document', disabled: !business.is_SessionMeeting() },
+                                { key: DocumentUploadType.InterimDocument, text: 'Upload Document', disabled: this._enableDocumentAttachment },
                                 { key: DocumentUploadType.LSOBill, text: 'Bills From LMS' },
-                                { key: DocumentUploadType.SessionDocuments, text: 'Attached Session Document' },
+                                { key: DocumentUploadType.SessionDocuments, text: 'Attached Session Document', disabled: !this._enableDocumentAttachment },
                             ]}
                         />
                     </div>

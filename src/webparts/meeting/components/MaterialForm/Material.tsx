@@ -199,7 +199,7 @@ export class MaterialForm extends React.Component<IMaterialProps, IMaterialState
                 },
                 onClick: () => {
                     this.setState({ loading: true });
-                    business.generateMeetingDocument(IcsAppConstants.getMaterialPreviewDocPartial())
+                    business.generateMeetingDocument(IcsAppConstants.getMaterialPreviewDocPartial(), '')
                         .then((blob) => {
                             McsUtil.createDownloadLink("Material.pdf", blob);
                             this.setState({ loading: false });

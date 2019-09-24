@@ -48,6 +48,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             minStartDate = new Date(startDate.getFullYear(), 1, 1, 0, 0, 0);
             maxStartDate = new Date(startDate.getFullYear(), 12, 31, 23, 59, 59);
         }
+        const enableBudgetHearing = business.can_CreateBudgetMeeting() && (business.get_Documents().length == 0);
         return (
             <div>
                 <div className={styles.row}>
@@ -180,15 +181,15 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                         <Toggle className={marginClassName} label="Will meeting be live streamed?" />
                     </div>
                     <div className={styles["col-sm-6"]}>
-                        <Toggle className={marginClassName} label="Is budget hearing?" disabled={business.get_Documents().length > 0} />
+                        <Toggle className={marginClassName} label="Is budget hearing?" disabled={!enableBudgetHearing} />
                     </div>
                 </div>
                 <div className={styles.row}>
                     <div className={css.combine(styles["col-12"], styles["d-flex"], styles["justify-content-around"], styles["mt-2"])}>
                         <PrimaryButton text="Save" onClick={this._saveEvent} />
-                        <PrimaryButton text="Print View" onClick={this._previewMeetingNotice} />
-                        <PrimaryButton text="Publish" onClick={() => this._openClosePublishPanel(true)} />
-                        <PrimaryButton text="Add committees to this meeting" onClick={() => this._openCloseAddCommitteePanel(true)}/>
+                        <PrimaryButton text="Print View" disabled={event.Id < 1} onClick={this._previewMeetingNotice} />
+                        <PrimaryButton text="Publish" disabled={event.Id < 1} onClick={() => this._openClosePublishPanel(true)} />
+                        <PrimaryButton text="Add committees to this meeting" disabled={event.Id < 1} onClick={() => this._openCloseAddCommitteePanel(true)} />
                     </div>
                 </div>
                 <div className={styles.row} style={{ marginBottom: "75px" }}>
@@ -328,7 +329,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             win.focus();
         } else {
             this.setState({ waitingMessage: 'Generating meeting notice (PREVIEW)' });
-            business.generateMeetingDocument(IcsAppConstants.getCreateMeetingNoticePartial())
+            business.generateMeetingDocument(IcsAppConstants.getCreateMeetingNoticePartial(), '')
                 .then((blob) => {
                     McsUtil.createDownloadLink("MeetingNotice.pdf", blob);
                     this.setState({ waitingMessage: '' });

@@ -91,7 +91,7 @@ class LobService implements ILobService {
             }
             const requestOptions: IHttpClientOptions = {
                 headers: requestHeaders,
-                body: JSON.stringify(data),
+                body: /multipart/i.test(contentType) ? data : JSON.stringify(data),
             };
             // if (McsUtil.isString(responseType)) {
             //     (requestOptions as any).responseType = responseType;

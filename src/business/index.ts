@@ -176,9 +176,9 @@ class BusinessLogic {
             service.editItemSpList(Mcs.WebConstants.committeeCalendarListId, false, id, listItemEntityTypeFullName, propertiesToUpdate)
                 .then((newevent: any) => {
                     const oldjcc = JSON.stringify(this._event.JointEventCommitteeId);
-                    this._event = { ...this._event, };
+                    this._event = newevent;
                     if (oldjcc !== JSON.stringify(newevent.JointEventCommitteeId)) {
-                        const startdate = new Date(this._event.EventDate);
+                        const startdate = new Date(newevent.EventDate);
                         return this._loadEventCommittees(startdate.getFullYear());
                     } else {
                         return Promise.resolve(null);
@@ -375,6 +375,10 @@ class BusinessLogic {
         return this._event.IsBudgetHearing;
     }
 
+    public can_CreateBudgetMeeting(): boolean {
+        return Mcs.WebConstants.committeeId == '02';
+    }
+
     public get_FolderNameToUpload(documentType: string): string {
         if (this.is_SessionMeeting() && /^bill$/i.test(documentType)) {
             return `Bill Drafts for ${this._event.Id}`;
@@ -405,13 +409,16 @@ class BusinessLogic {
         }
     }
 
-    public generateMeetingDocument(partialUrl: string, data?: IDbMeeting): Promise<Blob> {
+    public generateMeetingDocument(partialUrl: string, contentType: string, data?: any): Promise<Blob> {
         return new Promise((resolve, reject) => {
             if (!McsUtil.isDefined(data)) {
                 data = this.get_publishingMeeting();
             }
+            if (!McsUtil.isDefined(contentType)) {
+                contentType = "application/json";//"";
+            }
             lobService.postData(this._config.spfxContext.serviceScope, McsUtil.combinePaths(Mcs.WebConstants.icsServiceBase, partialUrl),
-                data, "Blob", "application/json", new BlobParser())
+                data, "Blob", contentType, new BlobParser())
                 .then((response) => {
                     resolve(response);
                 }).catch((e) => reject(e));
@@ -446,6 +453,28 @@ class BusinessLogic {
 
     public get_MeetingApprovalListService() {
         return service.get_MeetingApprovalListService();
+    }
+
+    public get_folderServerRelativeUrl(name: string): Promise<string> {
+        return new Promise((resolve) => {
+            if (this._eventId > 0 && this._documentList.length > 0) {
+                if (McsUtil.isDefined(this._documentFolderStructure)) {
+                    resolve(McsUtil.makeAbsUrl(this._findServerRelativeUrl(name, this._documentFolderStructure)));
+                } else {
+                    const startdate = new Date(this._event.EventDate);
+                    this._ensure_Folders(startdate.getFullYear(), this._event.Id)
+                        .then(() => {
+                            if (McsUtil.isDefined(this._documentFolderStructure)) {
+                                resolve(McsUtil.makeAbsUrl(this._findServerRelativeUrl(name, this._documentFolderStructure)));
+                            } else {
+                                resolve('');
+                            }
+                        }).catch(() => resolve(''));
+                }
+            } else {
+                resolve('');
+            }
+        });
     }
 
     /**

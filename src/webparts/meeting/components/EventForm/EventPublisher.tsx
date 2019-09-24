@@ -3,6 +3,7 @@ import { ChoiceGroup, IChoiceGroupOption, DefaultButton } from 'office-ui-fabric
 import { McsUtil } from '../../../../utility/helper';
 import { business } from '../../../../business';
 import IcsAppConstants from '../../../../configuration';
+import { Waiting } from '../../../../controls/waiting';
 
 export interface IEventPublisherProps {
     onComplete: () => void;
@@ -62,7 +63,8 @@ export default class EventPublisher extends React.Component<IEventPublisherProps
                 />
                 <DefaultButton text="Publish" style={{ marginTop: "10px" }}
                     disabled={!McsUtil.isString(this.state.publishingType)}
-                    onClick={this._onPublishButtonClicked} checked={true} />
+                    onClick={this._onPublishButtonClicked} />
+                <Waiting message={this.state.waitingMessage} />
             </div>
         );
     }
@@ -77,8 +79,8 @@ export default class EventPublisher extends React.Component<IEventPublisherProps
         business.loadEvent().then(() => {
             const postdata = business.get_publishingMeeting();
             lastUpdated = postdata.LastUpdated;
-            return Promise.all([business.generateMeetingDocument(IcsAppConstants.getCreateMeetingNoticePartial(), postdata),
-            business.generateMeetingDocument(IcsAppConstants.getCreateAgendaPreviewPartial(), postdata),
+            return Promise.all([business.generateMeetingDocument(IcsAppConstants.getCreateMeetingNoticePartial(), '', postdata),
+            business.generateMeetingDocument(IcsAppConstants.getCreateAgendaPreviewPartial(), '', postdata),
             this._initiateFlow(PublishingType.All)
             ]);
         }).then((responses) => {
@@ -120,7 +122,7 @@ export default class EventPublisher extends React.Component<IEventPublisherProps
             ]);
         }).then(() => {
             this.setState({ waitingMessage: '' });
-            this.props.onComplete();
+            this._onComplete();
         });
     }
 
@@ -157,4 +159,8 @@ export default class EventPublisher extends React.Component<IEventPublisherProps
         });
     }
 
+    private _onComplete = (): void => {
+        this.setState({ waitingMessage: '' });
+        this.props.onComplete();
+    }
 }

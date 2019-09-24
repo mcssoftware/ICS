@@ -1,4 +1,4 @@
-import { ISpAgendaTopic, ISpPresenter, ISpEventMaterial, IListItem, ISpEvent } from "../../../../interface/spmodal";
+import { ISpPresenter} from "../../../../interface/spmodal";
 import { IComponentAgenda } from "../../../../business/transformAgenda";
 import { InformationalType } from "../../../../controls/informational";
 

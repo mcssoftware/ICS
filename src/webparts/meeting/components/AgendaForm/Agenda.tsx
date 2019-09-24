@@ -1,5 +1,6 @@
 import * as React from 'react';
 import styles from '../Meeting.module.scss';
+import agendaDisplayStyles from './AgendaDisplay.module.scss';
 import { IAgendaProps, IAgendaState, AgendaPanelType } from './IAgenda';
 import css from '../../../../utility/css';
 import { CommandBar, SelectionMode, Selection, DetailsList, DetailsListLayoutMode, IColumn, Panel, PanelType, IDragDropEvents, IDragDropContext, mergeStyles } from 'office-ui-fabric-react';
@@ -49,7 +50,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
         const { agendaItems, panelHeaderText, panelType, panelItem, selectedAgendaItem, waitingMessage, orderChanged } = this.state;
         const agendaSelected = McsUtil.isDefined(selectedAgendaItem);
         return (
-            <div className={styles["container-fluid"]}>
+            <div className={css.combine(styles["container-fluid"], agendaDisplayStyles.agendaDisplay)}>
                 <div className={styles.row}>
                     <div className={styles["col-12"]}>
                         <CommandBar
@@ -421,6 +422,50 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
         }];
     }
 
+    // private _getListColumns = (): IColumn[] => {
+    //     return [{
+    //         name: 'Time',
+    //         key: 'agendaTime',
+    //         isSorted: false,
+    //         isResizable: true,
+    //         minWidth: 100,
+    //         onRender: (item?: IComponentAgenda, index?: number) => {
+    //             let dateval = '';
+    //             if (McsUtil.isDefined(item.AgendaDate)) {
+    //                 try {
+    //                     dateval = (new Date(item.AgendaDate as any) as any).format('MM/dd/yyyy @ h:mma');
+    //                 } catch{ dateval = ''; }
+    //             }
+    //             return (<div className={css.combine(styles["d-flex"], styles["flex-column"], styles["justify-content-around"])}>
+    //                 {dateval.length > 0 && <div>{dateval}</div>}
+    //                 <div>Agenda Number: {item.AgendaNumber}</div>
+    //             </div>);
+    //         }
+    //     },
+    //     {
+    //         name: 'Topic/SubTopic',
+    //         key: 'agendaTitle',
+    //         isSorted: false,
+    //         isResizable: true,
+    //         minWidth: 100,
+    //         onRender: (item?: IComponentAgenda, index?: number) => {
+    //             return (<TopicDisplay agenda={item} onAddOrEditBtnClicked={this._onTopicDisplayBtnsClicked} />);
+    //         }
+    //     },
+    //     {
+    //         name: 'Material',
+    //         key: 'agendaMaterial',
+    //         isSorted: false,
+    //         isResizable: true,
+    //         minWidth: 100,
+    //         onRender: (item?: IComponentAgenda, index?: number) => {
+    //             return (<MaterialDisplay agenda={item}
+    //                 onAddOrUpdateMaterial={this._onMaterialDisplayBtnClicked}
+    //             />);
+    //         }
+    //     }];
+    // }
+
     private _getCommandBarItems = (agendaSelected: boolean, orderChanged: boolean): any[] => {
         return [
             {
@@ -487,7 +532,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 },
                 onClick: () => {
                     this.setState({ waitingMessage: 'Generating agenda (PREVIEW)' });
-                    business.generateMeetingDocument(IcsAppConstants.getCreateAgendaPreviewPartial())
+                    business.generateMeetingDocument(IcsAppConstants.getCreateAgendaPreviewPartial(), '')
                         .then((blob) => {
                             McsUtil.createDownloadLink("Agenda.pdf", blob);
                             this.setState({ waitingMessage: '' });
@@ -511,5 +556,9 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
             }
         }
         return documentLookupIds;
+    }
+
+    private _canDisplayDate = (): boolean => {
+        return false;
     }
 }

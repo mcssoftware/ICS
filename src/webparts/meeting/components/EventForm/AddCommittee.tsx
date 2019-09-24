@@ -7,6 +7,7 @@ import { Promise } from 'es6-promise';
 import { McsUtil } from '../../../../utility/helper';
 import SpListService from '../../../../dal/spListService';
 import styles from "./AddCommittee.module.scss";
+import { Waiting } from '../../../../controls/waiting';
 
 
 interface ISpCommitteeLinkTemp extends ISpCommitteeLink {
@@ -21,6 +22,7 @@ export interface IAddCommitteeState {
     event: ISpEvent;
     currentCommittee: ISpCommitteeLink;
     options: ISpCommitteeLinkTemp[];
+    waitingMessage: string;
 }
 
 export default class AddCommittee extends React.Component<IAddCommitteeProps, IAddCommitteeState> {
@@ -43,7 +45,8 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
         this.state = {
             event: business.get_Event(),
             options,
-            currentCommittee
+            currentCommittee,
+            waitingMessage: ''
         };
     }
 
@@ -54,9 +57,11 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
             <div className={styles.addCommittee}>
                 {options.map((c, i) => {
                     return (<Checkbox label={c.CommitteeName}
+                        checked={c.selected}
                         onChange={(ev: any, isChecked: boolean) => { this._comitteeCheckboxOnchange(i, isChecked); }} />);
                 })}
-                <PrimaryButton text="Add committees" onClick={this._saveClicked} allowDisabledFocus checked={true} />
+                <PrimaryButton text="Add committees" onClick={this._saveClicked} allowDisabledFocus />
+                <Waiting message={this.state.waitingMessage} />
             </div>
         );
     }
@@ -69,36 +74,44 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
 
     private _saveClicked = (): void => {
         const { options } = this.state;
+        this.setState({ waitingMessage: 'Adding or removing committees to this meeting.' });
         const oldCommiteeList = business.get_Committee().filter(a => a.Code != Mcs.WebConstants.committeeId).map(a => a.Code);
         const selectedCommitee = options.filter(a => a.selected);
         const newCommitteeSelected = selectedCommitee.map(a => a.CommitteeId);
         if (JSON.stringify(oldCommiteeList) === JSON.stringify(newCommitteeSelected)) {
-            this.props.onComplete();
+            this._onComplete();
         } else {
-            // const committeeToAdd = selectedCommitee.filter(a => !findIndex(oldCommiteeList, b => b == a.CommitteeId));
-            const committeeToRemove = options.filter(a => !a.selected);//.filter(a => findIndex(oldCommiteeList, b => b == a.CommitteeId));
-            Promise.all([this._addToCommittee(selectedCommitee), this._removeFromCommittee(committeeToRemove)])
+            const committeeToAdd = selectedCommitee.filter(a => findIndex(oldCommiteeList, b => b == a.CommitteeId) < 0);
+            const committeeToRemove = options.filter(a => !a.selected && (findIndex(oldCommiteeList, b => b == a.CommitteeId) >= 0));
+            Promise.all([this._addToCommittee(committeeToAdd), this._removeFromCommittee(committeeToRemove)])
                 .then(() => {
                     const jointCommittee = selectedCommitee.map(a => a.Id).join(";#");
                     const event = business.get_Event();
                     return business.edit_Event(event.Id, event["odata.type"], { JointEventCommitteeId: jointCommittee });
-                }).then(() => this.props.onComplete())
-                .catch(() => this.props.onComplete());
+                }).then(() => this._onComplete())
+                .catch(() => this._onComplete());
         }
     }
 
+    private _onComplete = (): void => {
+        this.setState({ waitingMessage: '' });
+        this.props.onComplete();
+    }
+
     private _addToCommittee = (committeeList: ISpCommitteeLinkTemp[]): Promise<void> => {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             if (McsUtil.isArray(committeeList) && committeeList.length > 0) {
                 const event = business.get_Event();
+                const s1 = McsUtil.convertUtcDateToLocalDate(new Date(event.EventDate));
+                const s2 = event.MeetingStartTime;
+                const startDate = new Date(s1.toLocaleDateString() + ", " + s2.replace(/[^\d\s:APM]/gi, ""));
+                const endDate = McsUtil.convertUtcDateToLocalDate(new Date(event.EndDate));
                 const promises = committeeList.map(a => {
                     const committeeService = new SpListService<any>("Committee%20Calendar", false);
-                    committeeService.setWebUrl(a.URL.Description);
+                    committeeService.setWebUrl(a.URL.Url);
                     var newEventTitle = {
                         Title: a.CommitteeName + " Committee Meeting - with " + Mcs.WebConstants.committeeFullName,
-                        EventDate: event.EventDate,
                         MeetingStartTime: event.MeetingStartTime.replace(/[^\d\s:APM]/gi, ""),
-                        EndDate: event.EndDate,
                         Location: event.Location,
                         Description: event.Description,
                         fAllDayEvent: event.fAllDayEvent,
@@ -115,13 +128,15 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
                         HasLiveStream: event.HasLiveStream,
                         IsBudgetHearing: event.IsBudgetHearing || false,
                         ApprovedStatus: "(none)",
+                        EventDate: (new Date(startDate.toLocaleDateString())).toISOString(),
+                        EndDate: (new Date(endDate.toLocaleDateString())).toISOString(),
                     };
                     return committeeService.addNewItem(newEventTitle);
                 });
 
                 Promise.all(promises).then((a) => {
                     resolve();
-                }).catch(() => resolve());
+                }).catch((e) => reject(e));
 
             } else {
                 resolve();
@@ -130,7 +145,7 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
     }
 
     private _removeFromCommittee = (committeeList: ISpCommitteeLinkTemp[]): Promise<void> => {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             if (McsUtil.isArray(committeeList) && committeeList.length > 0) {
                 const event = business.get_Event();
                 const committeeid = this.state.currentCommittee.Id;
@@ -140,7 +155,7 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
 
                 Promise.all(promises).then((a) => {
                     resolve();
-                }).catch(() => resolve());
+                }).catch((e) => reject(e));
             } else {
                 resolve();
             }
@@ -148,9 +163,9 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
     }
 
     private _deleteFromCommitee = (committeeList: ISpCommitteeLinkTemp, committeeLookupId: number, eventId: number): Promise<void> => {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const committeeService = new SpListService<any>("Committee%20Calendar", false);
-            committeeService.setWebUrl(committeeList.URL.Description);
+            committeeService.setWebUrl(committeeList.URL.Url);
             const filter = `CommitteeLookupId eq '${committeeLookupId}' and CommitteeEventLookupId eq '${eventId}'`;
             committeeService.getListItems(filter, null, null, null, 0, 1)
                 .then((items) => {
@@ -159,7 +174,7 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
                     } else {
                         resolve();
                     }
-                }).then(() => resolve()).catch(() => resolve());
+                }).then(() => resolve()).catch((e) => reject(e));
         });
     }
 }

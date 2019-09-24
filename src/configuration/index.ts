@@ -6,4 +6,5 @@ export default class IcsAppConstants {
     public static getMaterialPreviewDocPartial: () => string = () => { return "api/Committee/CreateMaterialIndex?preview=true"; };
     public static getCreateMeetingNoticePartial: () => string = () => { return "api/Committee/CreateMeetingNotice"; };
     public static getCreateAgendaPreviewPartial: () => string = () => { return "api/Committee/CreateAgenda"; };
+    public static getCreateMinutePreviewPartial: () => string = () => { return "api/Committee/CreateMinutes"; };
 }
