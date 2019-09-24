@@ -8,7 +8,7 @@ import IcsAppConstants from "../configuration";
 export interface ILobService {
     getData(serviceScope: ServiceScope, url: string, parser?: IODataParser<any>): Promise<any>;
     getBlob(serviceScope: ServiceScope, url: string, parser?: BlobParser): Promise<any>;
-    postData(serviceScope: ServiceScope, url: string, data: any, responseType?: string, contentType?: string, parser?: IODataParser<any>, headers?: Headers): Promise<any>;
+    postData(serviceScope: ServiceScope, url: string, data: any, contentType: string, responseType?: string,  parser?: IODataParser<any>, headers?: Headers): Promise<any>;
     putData(serviceScope: ServiceScope, url: string, data: any, contentType?: string, parser?: IODataParser<any>): Promise<any>;
 }
 
@@ -72,7 +72,7 @@ class LobService implements ILobService {
         });
     }
 
-    public postData(serviceScope: ServiceScope, url: string, data: any, responseType?: string, contentType: string = "application/json",
+    public postData(serviceScope: ServiceScope, url: string, data: any, contentType: string, responseType?: string,
         parser: IODataParser<any> = new ODataDefaultParser(), headers?: Headers): Promise<any> {
         return new Promise((resolve, reject) => {
             // create an AadHttpClient object to consume the 3rd party API
@@ -85,7 +85,11 @@ class LobService implements ILobService {
                 requestHeaders.append("Accept", "application/json");
             }
 
-            requestHeaders.append("Content-Type", McsUtil.isString(contentType) ? contentType : "application/json");
+            if (McsUtil.isDefined(contentType) && !/multipart/i.test(contentType)) {
+                requestHeaders.append("Content-Type", McsUtil.isString(contentType) ? contentType : "application/json");
+            } else {
+                // requestHeaders.append("Content-Type", undefined);
+            }
             if (McsUtil.isDefined(headers)) {
                 requestHeaders = headers;
             }

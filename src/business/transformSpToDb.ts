@@ -113,7 +113,6 @@ const transformAgendaDbFormat = (webAbsoluteUrl: string, agenda: IComponentAgend
  * @param {ISpPresenter[]} presenter list of presenter sorted by ID
  */
 export const transformSpToDb = (webAbsoluteUrl: string, event: ISpEvent, agendaList: ISpAgendaTopic[], materialList: ISpEventMaterial[], presenterList: ISpPresenter[]): IDbMeeting => {
-    debugger;
     const modal = transformEventDbFormat(event);
     let lastModifiedDate = new Date(event.Modified as string);
 

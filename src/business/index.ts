@@ -414,11 +414,11 @@ class BusinessLogic {
             if (!McsUtil.isDefined(data)) {
                 data = this.get_publishingMeeting();
             }
-            if (!McsUtil.isDefined(contentType)) {
-                contentType = "application/json";//"";
+            if (typeof contentType === "string" && contentType.length === 0) {
+                contentType = "application/json";
             }
             lobService.postData(this._config.spfxContext.serviceScope, McsUtil.combinePaths(Mcs.WebConstants.icsServiceBase, partialUrl),
-                data, "Blob", contentType, new BlobParser())
+                data, contentType, "Blob", new BlobParser())
                 .then((response) => {
                     resolve(response);
                 }).catch((e) => reject(e));

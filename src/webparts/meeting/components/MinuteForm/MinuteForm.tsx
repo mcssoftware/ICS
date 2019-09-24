@@ -90,13 +90,14 @@ export class MinuteForm extends React.Component<IMinuteFormProps, IMinuteFormSta
     private _createOrUpdateMinute = (fileBlob: Blob[]): void => {
         const { minute } = this.state;
         const formData = new FormData();
-        formData.append("modal", JSON.stringify(business.get_publishingMeeting()));
+        const modalData = JSON.stringify(business.get_publishingMeeting());
+        formData.append("model", modalData);
         if (McsUtil.isArray(fileBlob) && fileBlob.length > 0) {
             fileBlob.forEach((b, i) => {
                 formData.append("file" + i, b);
             });
         }
-        business.generateMeetingDocument(IcsAppConstants.getCreateMinutePreviewPartial(), "multipart/form-data", formData)
+        business.generateMeetingDocument(IcsAppConstants.getCreateMinutePreviewPartial(), "multipart", formData)
             .then((blob) => {
                 var materialMetaData = {
                     Title: "Meeting Minutes",
