@@ -115,10 +115,34 @@ export default class EventPublisher extends React.Component<IEventPublisherProps
             }
             return Promise.all([meetingNoticePromise, agendaPromise]);
         }).then(files => {
+            let eventPromise;
+            const event = business.get_Event();
+            const eventLookupField = business.get_EventDocumentLookupField();
+            const docIds: number[] = event[eventLookupField] || [];
+            let newDocAdded = false;
+            files.forEach((f) => {
+                if (docIds.indexOf(f.Id) < 0) {
+                    docIds.push(f.Id);
+                    newDocAdded = true;
+                }
+            });
+            if (newDocAdded) {
+                const eventPropToUpdate = {};
+                eventPropToUpdate[eventLookupField] = {
+                    __metadata: {
+                        type: "Collection(Edm.Int32)"
+                    },
+                    results: [...docIds]
+                };
+                eventPromise = business.edit_Event(event.Id, event["odata.type"], eventPropToUpdate);
+            } else {
+                eventPromise = Promise.resolve(event);
+            }
             return Promise.all([
                 business.publishDocument(files[0]),
                 business.publishDocument(files[1]),
-                business.publishDocument(business.get_DocumentByType("Meeting Minutes"))
+                business.publishDocument(business.get_DocumentByType("Meeting Minutes")),
+                eventPromise
             ]);
         }).then(() => {
             this.setState({ waitingMessage: '' });

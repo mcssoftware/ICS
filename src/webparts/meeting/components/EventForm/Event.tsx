@@ -331,7 +331,16 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             this.setState({ waitingMessage: 'Generating meeting notice (PREVIEW)' });
             business.generateMeetingDocument(IcsAppConstants.getCreateMeetingNoticePartial(), '')
                 .then((blob) => {
-                    McsUtil.createDownloadLink("MeetingNotice.pdf", blob);
+                    const preview = {
+                        Title: "Preview",
+                        AgencyName: "LSO",
+                        lsoDocumentType: "PREVIEW",
+                        IncludeWithAgenda: false,
+                        SortNumber: 1
+                    };
+                    return business.upLoad_Document(business.get_FolderNameToUpload("Preview"), "Preview.pdf", preview, blob);
+                }).then((item) => {
+                    window.open(item.File.LinkingUrl, '_blank');
                     this.setState({ waitingMessage: '' });
                 }).catch(() => {
                     this.setState({ waitingMessage: '' });

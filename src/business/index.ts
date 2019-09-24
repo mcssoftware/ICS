@@ -307,8 +307,10 @@ class BusinessLogic {
                 const folderRelativeUrl = this._findServerRelativeUrl(folderName, this._documentFolderStructure);
                 return service.get_MaterialService().addOrUpdateDocument(folderRelativeUrl, fileName, propertiesToUpdate, blob);
             }).then((newdocument: ISpEventMaterial) => {
-                this._documentList.push(newdocument);
-                tranformAgenda(this._agendaList, this._documentList, this._presenterList);
+                if (!/preview.pdf/i.test(fileName)) {
+                    this._documentList.push(newdocument);
+                    tranformAgenda(this._agendaList, this._documentList, this._presenterList);
+                }
                 resolve(newdocument);
             }).catch((e) => reject(e));
         });
@@ -800,20 +802,13 @@ class BusinessLogic {
                 SubFolder: [
                     { name: 'Agency Budget Requests' },
                     { name: 'Agency Handouts' },
-                    {
-                        name: 'Bill Drafts',
-                        SubFolder: McsUtil.isUnsignedInt(meetingId) ? [{ name: `Bill Drafts for ${meetingId}` }] : undefined,
-                    },
                     { name: 'Agency' },
                     { name: 'LSO Analysis' },
                     { name: 'Citizen or Lobbyist Handouts' },
                     { name: 'Executive Letters' },
                     { name: 'Post-Session Summaries' },
                     { name: 'Pre-Session Materials' },
-                    {
-                        name: 'Meetings',
-                        SubFolder: [{ name: `Material for ${meetingId}` }]
-                    }
+                    { name: 'Preview' }
                 ]
             };
             if (McsUtil.isUnsignedInt(meetingId)) {
@@ -821,9 +816,13 @@ class BusinessLogic {
                     {
                         name: 'Bill Drafts',
                         SubFolder: [{ name: `Bill Drafts for ${meetingId}` }],
+                    },
+                    {
+                        name: 'Meetings',
+                        SubFolder: [{ name: `Material for ${meetingId}` }]
                     });
             } else {
-                meetingFolders.SubFolder.push({ name: 'Bill Drafts' });
+                meetingFolders.SubFolder.push({ name: 'Bill Drafts' }, { name: 'Meetings' });
             }
         } else {
             meetingFolders = {
@@ -831,7 +830,8 @@ class BusinessLogic {
                 SubFolder: [
                     { name: 'Correspondence' },
                     { name: 'Work Products' },
-                    { name: 'Reports' }
+                    { name: 'Reports' },
+                    { name: 'Preview' }
                 ]
             };
             if (McsUtil.isUnsignedInt(meetingId)) {

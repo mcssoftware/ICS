@@ -201,7 +201,16 @@ export class MaterialForm extends React.Component<IMaterialProps, IMaterialState
                     this.setState({ loading: true });
                     business.generateMeetingDocument(IcsAppConstants.getMaterialPreviewDocPartial(), '')
                         .then((blob) => {
-                            McsUtil.createDownloadLink("Material.pdf", blob);
+                            const preview = {
+                                Title: "Preview",
+                                AgencyName: "LSO",
+                                lsoDocumentType: "PREVIEW",
+                                IncludeWithAgenda: false,
+                                SortNumber: 1
+                            };
+                            return business.upLoad_Document(business.get_FolderNameToUpload("Preview"), "Preview.pdf", preview, blob);
+                        }).then((item) => {
+                            window.open(item.File.LinkingUrl, '_blank');
                             this.setState({ loading: false });
                         }).catch(() => {
                             this.setState({ loading: false });

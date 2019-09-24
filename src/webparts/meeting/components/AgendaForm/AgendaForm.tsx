@@ -301,7 +301,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                         __metadata: {
                             type: "Collection(Edm.Int32)"
                         },
-                        results: newPresenters.map(a => a.Id)
+                        results: [...newPresenters.map(a => a.Id)]
                     },
                     // PresentersLookupId: newPresenters.map(a => a.Id),
                     ParentTopicId: this.props.isSubTopic ? this.props.parentTopicId : null,

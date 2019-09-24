@@ -7,6 +7,7 @@ import { Link, PrimaryButton } from 'office-ui-fabric-react';
 import { Waiting } from '../../../../controls/waiting';
 import { sp } from '@pnp/sp';
 import IcsAppConstants from '../../../../configuration';
+import css from '../../../../utility/css';
 
 export interface IMinuteFormProps {
     event: ISpEvent;
@@ -40,21 +41,24 @@ export class MinuteForm extends React.Component<IMinuteFormProps, IMinuteFormSta
         const { minute, folderToInsert } = this.state;
         return (
             <div>
-                {McsUtil.isDefined(minute) && <div className={styles.row}>
+                {McsUtil.isDefined(minute) && <div className={css.combine(styles.row, styles["m-2"])}>
                     <div className={styles["col-4"]}>
-                        <Link href={minute.File.LinkingUrl}>Edit Minute</Link>
+                        {/* <Link href={minute.File.LinkingUrl}>Edit Minute</Link> */}
+                        <PrimaryButton href={minute.File.LinkingUrl} target="_blank" title="Edit Minute"
+                            style={{ color: "#fff", textDecoration: "none" }}>Edit Minute</PrimaryButton>
                     </div>
                     <div className={styles["col-4"]}>
-                        <PrimaryButton text="Primary" disabled={minute.File.CheckOutType === 2} onClick={this._approveMinuteClicked} />
+                        <PrimaryButton text="Approve meeting minutes for publishing" disabled={minute.File.CheckOutType === 2} onClick={this._approveMinuteClicked} />
                     </div>
                 </div>}
-                <div className={styles.row}>
+                <div className={css.combine(styles.row, styles["m-2"])}>
                     <div className={styles["col-4"]}>
                         <PrimaryButton text={McsUtil.isDefined(minute) ? "Update Material Index in Minutes" : "Generate Template"}
                             onClick={this._createMinuteClicked} />
                     </div>
                     <div className={styles["col-4"]}>
                         <PrimaryButton href={folderToInsert} target="_blank" title="Open Document Folders"
+                            style={{ color: "#fff", textDecoration: "none" }}
                             disabled={!McsUtil.isString(folderToInsert)} >Open Document Folders</PrimaryButton>
                     </div>
                     <div className={styles["col-4"]}></div>
@@ -107,6 +111,23 @@ export class MinuteForm extends React.Component<IMinuteFormProps, IMinuteFormSta
                     SortNumber: McsUtil.isDefined(minute) ? minute.SortNumber : 999, //to ensure this is always last document.
                 };
                 return business.upLoad_Document(business.get_FolderNameToUpload(minuteDocumentType), "Meeting Minutes.docx", materialMetaData, blob);
+            }).then((document) => {
+                const event = business.get_Event();
+                const eventPropToUpdate = {};
+                const eventLookupField = business.get_EventDocumentLookupField();
+                const docIds: number[] = event[eventLookupField] || [];
+                if (docIds.indexOf(document.Id) < 0) {
+                    docIds.push(document.Id);
+                    eventPropToUpdate[eventLookupField] = {
+                        __metadata: {
+                            type: "Collection(Edm.Int32)"
+                        },
+                        results: [...docIds]
+                    };
+                    return business.edit_Event(event.Id, event["odata.type"], eventPropToUpdate);
+                } else {
+                    return Promise.resolve(event);
+                }
             }).then(() => {
                 this.setState({ minute: business.get_DocumentByType(minuteDocumentType), waitingMessage: '' });
             }).catch();

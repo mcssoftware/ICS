@@ -284,22 +284,24 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 this.setState({ waitingMessage: "Attaching document to meeting." });
                 const eventPropToUpdate = {};
                 const eventLookupField = business.get_EventDocumentLookupField();
+                const lookupids = this._getDocumentLookupIds((McsUtil.isArray(event[eventLookupField]) ? event[eventLookupField] as number[] : []), document.Id, type);
                 eventPropToUpdate[eventLookupField] = {
                     __metadata: {
                         type: "Collection(Edm.Int32)"
                     },
-                    results: this._getDocumentLookupIds((McsUtil.isArray(event[eventLookupField]) ? event[eventLookupField] as number[] : []), document.Id, type)
+                    results: [...lookupids]
                 };
                 business.edit_Event(event.Id, event["odata.type"], eventPropToUpdate)
                     .then((e) => {
                         if (McsUtil.isDefined(agenda)) {
                             const agendaPropToUpdate = {};
                             const agendaLookupField = business.get_AgendaDocumentLookupField();
+                            const docIds = this._getDocumentLookupIds((McsUtil.isArray(agenda[agendaLookupField]) ? agenda[agendaLookupField] as number[] : []), document.Id, type);
                             agendaPropToUpdate[agendaLookupField] = {
                                 __metadata: {
                                     type: "Collection(Edm.Int32)"
                                 },
-                                results: this._getDocumentLookupIds((McsUtil.isArray(agenda[agendaLookupField]) ? agenda[agendaLookupField] as number[] : []), document.Id, type)
+                                results: [...docIds]
                             };
                             business.edit_Agenda(agenda.Id, agenda["odata.type"], agendaPropToUpdate)
                                 .then((updatedAgenda: IComponentAgenda) => {
@@ -534,7 +536,16 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                     this.setState({ waitingMessage: 'Generating agenda (PREVIEW)' });
                     business.generateMeetingDocument(IcsAppConstants.getCreateAgendaPreviewPartial(), '')
                         .then((blob) => {
-                            McsUtil.createDownloadLink("Agenda.pdf", blob);
+                            const preview = {
+                                Title: "Preview",
+                                AgencyName: "LSO",
+                                lsoDocumentType: "PREVIEW",
+                                IncludeWithAgenda: false,
+                                SortNumber: 1
+                            };
+                            return business.upLoad_Document(business.get_FolderNameToUpload("Preview"), "Preview.pdf", preview, blob);
+                        }).then((item) => {
+                            window.open(item.File.LinkingUrl, '_blank');
                             this.setState({ waitingMessage: '' });
                         }).catch(() => {
                             this.setState({ waitingMessage: '' });
