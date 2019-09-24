@@ -332,15 +332,15 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             business.generateMeetingDocument(IcsAppConstants.getCreateMeetingNoticePartial(), '')
                 .then((blob) => {
                     const preview = {
-                        Title: "Preview",
+                        Title: IcsAppConstants.getPreviewFolder(),
                         AgencyName: "LSO",
-                        lsoDocumentType: "PREVIEW",
+                        lsoDocumentType: IcsAppConstants.getPreviewFolder(),
                         IncludeWithAgenda: false,
                         SortNumber: 1
                     };
-                    return business.upLoad_Document(business.get_FolderNameToUpload("Preview"), "Preview.pdf", preview, blob);
+                    return business.upLoad_Document(business.get_FolderNameToUpload(IcsAppConstants.getPreviewFolder()), "Meeting Notice Preview.pdf", preview, blob);
                 }).then((item) => {
-                    window.open(item.File.LinkingUrl, '_blank');
+                    window.open(McsUtil.makeAbsUrl(item.File.ServerRelativeUrl), '_blank');
                     this.setState({ waitingMessage: '' });
                 }).catch(() => {
                     this.setState({ waitingMessage: '' });

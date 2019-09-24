@@ -382,6 +382,9 @@ class BusinessLogic {
     }
 
     public get_FolderNameToUpload(documentType: string): string {
+        if (documentType === IcsAppConstants.getPreviewFolder()) {
+            return documentType;
+        }
         if (this.is_SessionMeeting() && /^bill$/i.test(documentType)) {
             return `Bill Drafts for ${this._event.Id}`;
         }
@@ -808,7 +811,7 @@ class BusinessLogic {
                     { name: 'Executive Letters' },
                     { name: 'Post-Session Summaries' },
                     { name: 'Pre-Session Materials' },
-                    { name: 'Preview' }
+                    { name: IcsAppConstants.getPreviewFolder() }
                 ]
             };
             if (McsUtil.isUnsignedInt(meetingId)) {
@@ -831,7 +834,7 @@ class BusinessLogic {
                     { name: 'Correspondence' },
                     { name: 'Work Products' },
                     { name: 'Reports' },
-                    { name: 'Preview' }
+                    { name: IcsAppConstants.getPreviewFolder() }
                 ]
             };
             if (McsUtil.isUnsignedInt(meetingId)) {
