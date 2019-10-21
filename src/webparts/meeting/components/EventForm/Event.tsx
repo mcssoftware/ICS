@@ -182,7 +182,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                 </div>
                 <div className={styles.row}>
                     <div className={css.combine(styles["col-12"], styles["d-flex"], styles["justify-content-around"], styles["mt-2"])}>
-                        <PrimaryButton text="Save" onClick={this._saveEvent} />
+                        <PrimaryButton text="Save" onClick={this._saveEvent} disabled={!this._canSaveMeeting()} />
                         <PrimaryButton text="Print View" disabled={event.Id < 1} onClick={this._previewMeetingNotice} />
                         <PrimaryButton text="Publish" disabled={event.Id < 1} onClick={() => this._openClosePublishPanel(true)} />
                         <PrimaryButton text="Add committees to this meeting" disabled={event.Id < 1} onClick={() => this._openCloseAddCommitteePanel(true)} />
@@ -212,6 +212,23 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                 <Waiting message={waitingMessage} />
             </div>
         );
+    }
+
+    private _canSaveMeeting = (): boolean => {
+        const event = this.state.event;
+
+        const hasDescription = McsUtil.isString(event.Description);
+        const hasCommitteeStaffNames = McsUtil.isString(event.CommitteeStaff);
+        if (hasDescription && hasCommitteeStaffNames) {
+            const isTentative = /tentative/i.test(event.Category);
+            if (isTentative) {
+                return hasDescription && hasCommitteeStaffNames;
+            } else {
+                return McsUtil.isDefined(event.EventDate) && McsUtil.isDefined(event.EndDate) && McsUtil.isString(event.WorkAddress) && 
+                McsUtil.isString(event.WorkCity) && McsUtil.isString(event.WorkState);
+            }
+        }
+        return false;
     }
 
     private _onCategoryChange = (ev?: any, option?: IChoiceGroupOption): void => {

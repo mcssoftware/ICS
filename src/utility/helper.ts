@@ -21,7 +21,7 @@ export class McsUtil {
     }
 
     public static isString(n: any): boolean {
-        return typeof n === "string" && n.length > 0;
+        return typeof n === "string" && n.trim().length > 0;
     }
 
     public static isNumeric(n: any): boolean {
