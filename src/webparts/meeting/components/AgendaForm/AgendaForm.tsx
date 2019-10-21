@@ -104,7 +104,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                                     type="number"
                                     name="AgendaNumber"
                                     onGetErrorMessage={(value) => /\d+/.test(value) ? undefined : 'Must be numberic'}
-                                    data-validation={'\d+'}
+                                    data-validation={'\\d+'}
                                     onChange={this._onAgendaTextChanged}
                                     value={agenda.AgendaNumber.toString()} />
                             </div>
@@ -170,7 +170,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                             <tr>
                                 <td style={{ maxWidth: presenter_col_1_Width }}><TextField name="SortNumber"
                                     type='number'
-                                    data-validation={'\d+'}
+                                    data-validation={'\\d+'}
                                     value={presenter.SortNumber.toString()}
                                     required
                                     onChange={this._onPresenterTextChanged} /></td>

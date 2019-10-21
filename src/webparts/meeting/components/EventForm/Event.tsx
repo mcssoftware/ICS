@@ -224,8 +224,8 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             if (isTentative) {
                 return hasDescription && hasCommitteeStaffNames;
             } else {
-                return McsUtil.isDefined(event.EventDate) && McsUtil.isDefined(event.EndDate) && McsUtil.isString(event.WorkAddress) && 
-                McsUtil.isString(event.WorkCity) && McsUtil.isString(event.WorkState);
+                return McsUtil.isDefined(event.EventDate) && McsUtil.isDefined(event.EndDate) && McsUtil.isString(event.WorkAddress) &&
+                    McsUtil.isString(event.WorkCity) && McsUtil.isString(event.WorkState);
             }
         }
         return false;
@@ -277,7 +277,6 @@ export default class Event extends React.Component<IEventProps, IEventState> {
 
     private _saveEvent = (): void => {
         const { event } = this.state;
-        debugger;
         const propertiesToUpdate = {
             EventDate: McsUtil.convertToISO(this.state.startDate),
             EndDate: McsUtil.convertToISO(this.state.endDate),
@@ -314,6 +313,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                 this.setState({ event: newEvent, waitingMessage: '' });
                 this.props.onChange();
             } else {
+                const agendaTime = new Date(this.state.startDate.toLocaleDateString() + ', ' + newEvent.MeetingStartTime);
                 const queryParameters: UrlQueryParameterCollection = new UrlQueryParameterCollection(window.location.href);
                 var url = window.location.href.split("?")[0] + "?PageType=6&ListId=" + queryParameters.getValue("ListId") +
                     "&calendarItemId=" + newEvent.Id + "&Source=" + queryParameters.getValue("Source");
@@ -321,12 +321,12 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                     Title: "Call to Order",
                     AgendaTitle: "Call to Order",
                     AgendaNumber: 1,
-                    AgendaDate: this.state.startDate,
+                    AgendaDate: McsUtil.convertToISO(agendaTime),
                     EventLookupId: newEvent.Id,
                     ParentTopicId: undefined,
                     AllowPublicComments: false,
                 };
-                tempTopic.AgendaDate.setHours(0, 0, 0, 0);
+                // tempTopic.AgendaDate.setHours(0, 0, 0, 0);
                 business.add_Agenda(tempTopic)
                     .then(() => window.location.href = url)
                     .catch(() => window.location.href = url);

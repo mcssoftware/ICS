@@ -48,6 +48,9 @@ const subTopicItemRender = (parentTopic: IComponentAgenda, item: IComponentAgend
 const addIcon: IIconProps = { iconName: 'Add' };
 
 const topicDisplay: React.SFC<ITopicDisplayProps> = (props) => {
+    const subtopics = props.agenda.SubTopics.map((item, index) => {
+        return subTopicItemRender(props.agenda, item, index, props.onAddOrEditBtnClicked);
+    });
 
     return (
         <div className={styles.card}>
@@ -55,9 +58,9 @@ const topicDisplay: React.SFC<ITopicDisplayProps> = (props) => {
                 {props.agenda.AgendaTitle} <span style={{ fontWeight: "normal", fontSize: "12px" }}>{presenterDiplay(props.agenda)}</span>
             </div>
             <div className={styles["card-body"]}>
-                <List items={props.agenda.SubTopics} onRenderCell={(item, index) => {
-                    return subTopicItemRender(props.agenda, item, index, props.onAddOrEditBtnClicked);
-                }} />
+                <div style={{ minHeight: "25px" }}>
+                    {subtopics}
+                </div>
             </div>
             <div className={styles["card-footer"]}>
                 <CommandBarButton iconProps={addIcon} text="New sub topic" onClick={() => { props.onAddOrEditBtnClicked(props.agenda, void (0)); }} />

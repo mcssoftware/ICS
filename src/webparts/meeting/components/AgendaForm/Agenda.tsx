@@ -181,7 +181,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
         let message = '';
         if (McsUtil.isDefined(parentTopicId)) {
             const agendaIndex = findIndex(agendaCopy, a => a.Id === parentTopicId);
-            const subtopicIndex = findIndex(agendaCopy[agendaIndex].SubTopics, topic.Id);
+            const subtopicIndex = findIndex(agendaCopy[agendaIndex].SubTopics, a => a.Id === topic.Id);
             if (subtopicIndex >= 0) {
                 agendaCopy[agendaIndex].SubTopics[subtopicIndex] = topic;
                 message = 'Subtopic updated';
