@@ -52,7 +52,7 @@ const topicDisplay: React.SFC<ITopicDisplayProps> = (props) => {
     return (
         <div className={styles.card}>
             <div className={styles["card-header"]}>
-                {props.agenda.AgendaTitle} {presenterDiplay(props.agenda)}
+                {props.agenda.AgendaTitle} <span style={{ fontWeight: "normal", fontSize: "12px" }}>{presenterDiplay(props.agenda)}</span>
             </div>
             <div className={styles["card-body"]}>
                 <List items={props.agenda.SubTopics} onRenderCell={(item, index) => {

@@ -89,7 +89,7 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                     <div>
                         {(panelType == AgendaPanelType.topic || panelType == AgendaPanelType.subtopic) &&
                             <AgendaForm
-                                parentTopicId={McsUtil.isDefined(selectedAgendaItem) ? selectedAgendaItem.Id : void (0)}
+                                parentTopicId={McsUtil.isDefined(selectedAgendaItem) && (panelType == AgendaPanelType.subtopic) ? selectedAgendaItem.Id : void (0)}
                                 isSubTopic={panelType == AgendaPanelType.subtopic}
                                 agendaNumber={this._getNextAgendaNumber(selectedAgendaItem, panelType)}
                                 agenda={panelItem}
@@ -199,7 +199,14 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 agendaCopy.push(topic);
             }
         }
-        this.setState({ agendaItems: agendaCopy, showPanel: false, waitingMessage: '', message, messageType: InformationalType.Info });
+        this.setState({
+            agendaItems: agendaCopy,
+            selectedAgendaItem: McsUtil.isDefined(parentTopicId) ? this.state.selectedAgendaItem : topic,
+            showPanel: false,
+            waitingMessage: '',
+            message,
+            messageType: InformationalType.Info
+        });
     }
 
     private _onTopicAddButtonClicked = (agenda: IComponentAgenda): void => {
@@ -390,12 +397,15 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 let dateval = '';
                 if (McsUtil.isDefined(item.AgendaDate)) {
                     try {
-                        dateval = (new Date(item.AgendaDate as any) as any).format('MM/dd/yyyy @ h:mma');
+                        const agendaDate = McsUtil.convertToISONoAllDay(item.AgendaDate as string);
+                        if (!(agendaDate.getHours() === 0 && agendaDate.getMinutes() === 0)) {
+                            dateval = (agendaDate as any).format('MM/dd/yyyy @ h:mmA');
+                        }
                     } catch{ dateval = ''; }
                 }
                 return (<div className={css.combine(styles["d-flex"], styles["flex-column"], styles["justify-content-around"])}>
-                    {dateval.length > 0 && <div>dateval</div>}
-                    <div>Agenda Number: {item.AgendaNumber}</div>
+                    {dateval.length > 0 && <div>{dateval}</div>}
+                    <div><strong>Agenda Number: </strong>{item.AgendaNumber}</div>
                 </div>);
             }
         },
@@ -423,50 +433,6 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
             }
         }];
     }
-
-    // private _getListColumns = (): IColumn[] => {
-    //     return [{
-    //         name: 'Time',
-    //         key: 'agendaTime',
-    //         isSorted: false,
-    //         isResizable: true,
-    //         minWidth: 100,
-    //         onRender: (item?: IComponentAgenda, index?: number) => {
-    //             let dateval = '';
-    //             if (McsUtil.isDefined(item.AgendaDate)) {
-    //                 try {
-    //                     dateval = (new Date(item.AgendaDate as any) as any).format('MM/dd/yyyy @ h:mma');
-    //                 } catch{ dateval = ''; }
-    //             }
-    //             return (<div className={css.combine(styles["d-flex"], styles["flex-column"], styles["justify-content-around"])}>
-    //                 {dateval.length > 0 && <div>{dateval}</div>}
-    //                 <div>Agenda Number: {item.AgendaNumber}</div>
-    //             </div>);
-    //         }
-    //     },
-    //     {
-    //         name: 'Topic/SubTopic',
-    //         key: 'agendaTitle',
-    //         isSorted: false,
-    //         isResizable: true,
-    //         minWidth: 100,
-    //         onRender: (item?: IComponentAgenda, index?: number) => {
-    //             return (<TopicDisplay agenda={item} onAddOrEditBtnClicked={this._onTopicDisplayBtnsClicked} />);
-    //         }
-    //     },
-    //     {
-    //         name: 'Material',
-    //         key: 'agendaMaterial',
-    //         isSorted: false,
-    //         isResizable: true,
-    //         minWidth: 100,
-    //         onRender: (item?: IComponentAgenda, index?: number) => {
-    //             return (<MaterialDisplay agenda={item}
-    //                 onAddOrUpdateMaterial={this._onMaterialDisplayBtnClicked}
-    //             />);
-    //         }
-    //     }];
-    // }
 
     private _getCommandBarItems = (agendaSelected: boolean, orderChanged: boolean): any[] => {
         return [

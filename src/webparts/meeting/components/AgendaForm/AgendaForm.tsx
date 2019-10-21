@@ -28,9 +28,11 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
         } else {
             if (McsUtil.isDefined(props.agenda)) {
                 agendaDate = McsUtil.convertToISONoAllDay(props.agenda.AgendaDate as string);
-                if (agendaDate.getHours() == 0 && agendaDate.getMinutes() == 0) {
-                    useTime = false;
+                if (!(agendaDate.getHours() === 0 && agendaDate.getMinutes() === 0)) {
+                    useTime = true;
                     agendaTime = agendaDate.toLocaleTimeString();
+                } else {
+                    useTime = false;
                 }
             }
         }
@@ -230,6 +232,9 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
     }
 
     private _onAgendaDateChanged = (date: Date | null | undefined): void => {
+        if (McsUtil.isDefined(date)) {
+            this.setState({ agendaDate: date });
+        }
     }
 
     private _onUseTimeChanged = (ev?: any, checked?: boolean): void => {

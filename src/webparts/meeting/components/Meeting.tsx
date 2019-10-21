@@ -33,8 +33,8 @@ export default class Meeting extends React.Component<IMeetingProps, IMeetingStat
   public render(): React.ReactElement<IMeetingProps> {
     const { isLoaded, selectedTab, isNewEvent, message } = this.state;
     const event = business.get_Event();
-    let minDate: Date = undefined;
-    let maxDate: Date = undefined;
+    let minDate: Date = McsUtil.isDefined(event) && (event.Id > 0) ? McsUtil.convertFromISO(event.EventDate) : undefined;
+    let maxDate: Date = McsUtil.isDefined(event) && (event.Id > 0)? McsUtil.convertFromISO(event.EndDate) : undefined;
 
     return (
       <div className={styles["container-fluid"]}>
