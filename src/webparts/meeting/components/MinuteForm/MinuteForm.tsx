@@ -3,7 +3,7 @@ import { business } from '../../../../business';
 import { ISpEvent, ISpEventMaterial } from "../../../../interface/spmodal";
 import styles from '../Meeting.module.scss';
 import { McsUtil } from '../../../../utility/helper';
-import { Link, PrimaryButton } from 'office-ui-fabric-react';
+import { PrimaryButton } from 'office-ui-fabric-react';
 import { Waiting } from '../../../../controls/waiting';
 import { sp } from '@pnp/sp';
 import IcsAppConstants from '../../../../configuration';
@@ -41,10 +41,9 @@ export class MinuteForm extends React.Component<IMinuteFormProps, IMinuteFormSta
         const { minute, folderToInsert } = this.state;
         return (
             <div>
-                {McsUtil.isDefined(minute) && <div className={css.combine(styles.row, styles["m-2"])}>
+                {McsUtil.isDefined(minute) && McsUtil.isDefined(minute.File) && <div className={css.combine(styles.row, styles["m-2"])}>
                     <div className={styles["col-4"]}>
-                        {/* <Link href={minute.File.LinkingUrl}>Edit Minute</Link> */}
-                        <PrimaryButton href={minute.File.LinkingUrl} target="_blank" title="Edit Minute"
+                        <PrimaryButton title="Edit Minute" onClick={this._openInWordApp}
                             style={{ color: "#fff", textDecoration: "none" }}>Edit Minute</PrimaryButton>
                     </div>
                     <div className={styles["col-4"]}>
@@ -66,6 +65,13 @@ export class MinuteForm extends React.Component<IMinuteFormProps, IMinuteFormSta
                 <Waiting message={this.state.waitingMessage} />
             </div>
         );
+    }
+
+    private _openInWordApp = (): void => {
+        const { minute } = this.state;
+        const serverRelativeUrl: string = minute.File.ServerRelativeUrl.split("?")[0];
+        _WriteDocEngagement("DocLibECB_Click_ID_EditIn_Word", "OneDrive_DocLibECB_Click_ID_EditIn_Word");
+        editDocumentWithProgID2(serverRelativeUrl, "", "SharePoint.OpenDocuments", "0", business.getWebUrl(), "0", "ms-word");
     }
 
     private _approveMinuteClicked = (): void => {
@@ -133,3 +139,6 @@ export class MinuteForm extends React.Component<IMinuteFormProps, IMinuteFormSta
             }).catch();
     }
 }
+
+declare function _WriteDocEngagement(a: string, b: string): void;
+declare function editDocumentWithProgID2(a: string, b: string, c: string, d: string, e: string, f: string, g: string): void;
