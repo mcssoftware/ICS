@@ -52,6 +52,7 @@ class BusinessLogic {
      */
     public setup(config: any): void {
         this._config = config;
+        McsUtil.setTimeOffset(config.spfxContext.pageContext.web.timeZoneInfo.offset + config.spfxContext.pageContext.web.timeZoneInfo.daylightOffset);
         service.initialize();
         this._initialize();
     }
@@ -748,7 +749,7 @@ class BusinessLogic {
             } catch{ }
         }
         const startdate = new Date(meetingdate.getFullYear(), meetingdate.getMonth(), meetingdate.getDate(), 8, 30, 0, 0);
-        const endate = new Date(meetingdate.getFullYear(), meetingdate.getMonth(), meetingdate.getDate(), 23, 0, 0, 0);
+        const isostring = startdate.toISOString().split('T')[0];
         return {
             Id: 0,
             ApprovedStatus: '(none)',
@@ -757,8 +758,8 @@ class BusinessLogic {
             ConferenceNumber: '',
             Category: 'Tentative',
             WorkState: 'Wyoming',
-            EventDate: startdate.toISOString(),// (new Date(startdate.toLocaleDateString())).toISOString(),
-            EndDate: endate.toISOString(),//(new Date(endate.toLocaleDateString())).toISOString(),
+            EventDate: `${isostring}T00:00:00Z`,
+            EndDate: `${isostring}T23:59:00Z`,
             MeetingStartTime: startdate.toLocaleTimeString(),
             Description: '',
             HasLiveStream: false,

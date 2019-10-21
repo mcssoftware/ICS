@@ -6,10 +6,11 @@ import { sortBy } from "@microsoft/sp-lodash-subset";
 
 const transformEventDbFormat = (model: ISpEvent): IDbMeeting => {
 
-    var s1 = McsUtil.convertUtcDateToLocalDate(new Date(model.EventDate));
+    var s1 = new Date(model.EventDate);
     var s2 = model.MeetingStartTime;
-    const startDate = new Date(s1.toLocaleDateString() + ", " + s2.replace(/[^\d\s:APM]/gi, ""));
-    const endDate = McsUtil.convertUtcDateToLocalDate(new Date(model.EndDate));
+    const startDate = new Date(s1.getTime() +
+        (new Date('1/1/2001, ' + s2.replace(/[^\d\s:APM]/gi, "")).getTime() - new Date('1/1/2001').getTime()));
+    const endDate = new Date(model.EndDate);
     const meetingData: IDbMeeting = {
         Office365ID: model.Id,
         CommitteeYear: startDate.getFullYear(),

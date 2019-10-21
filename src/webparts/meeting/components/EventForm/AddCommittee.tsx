@@ -102,10 +102,6 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
         return new Promise((resolve, reject) => {
             if (McsUtil.isArray(committeeList) && committeeList.length > 0) {
                 const event = business.get_Event();
-                const s1 = McsUtil.convertUtcDateToLocalDate(new Date(event.EventDate));
-                const s2 = event.MeetingStartTime;
-                const startDate = new Date(s1.toLocaleDateString() + ", " + s2.replace(/[^\d\s:APM]/gi, ""));
-                const endDate = McsUtil.convertUtcDateToLocalDate(new Date(event.EndDate));
                 const promises = committeeList.map(a => {
                     const committeeService = new SpListService<any>("Committee%20Calendar", false);
                     committeeService.setWebUrl(a.URL.Url);
@@ -128,8 +124,8 @@ export default class AddCommittee extends React.Component<IAddCommitteeProps, IA
                         HasLiveStream: event.HasLiveStream,
                         IsBudgetHearing: event.IsBudgetHearing || false,
                         ApprovedStatus: "(none)",
-                        EventDate: (new Date(startDate.toLocaleDateString())).toISOString(),
-                        EndDate: (new Date(endDate.toLocaleDateString())).toISOString(),
+                        EventDate: event.EventDate,
+                        EndDate: event.EndDate,
                     };
                     return committeeService.addNewItem(newEventTitle);
                 });

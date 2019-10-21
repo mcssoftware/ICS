@@ -21,14 +21,10 @@ export default class Event extends React.Component<IEventProps, IEventState> {
 
     constructor(props: Readonly<IEventProps>) {
         super(props);
-        var s1 = McsUtil.convertUtcDateToLocalDate(new Date(props.event.EventDate));
-        var s2 = props.event.MeetingStartTime;
-        const startDate = new Date(s1.toLocaleDateString() + ", " + s2.replace(/[^\d\s:APM]/gi, ""));
-        const endDate = McsUtil.convertUtcDateToLocalDate(new Date(props.event.EndDate));
         this.state = {
             event: { ...props.event },
-            startDate,
-            endDate,
+            startDate: McsUtil.convertFromISO(props.event.EventDate),
+            endDate: McsUtil.convertFromISO(props.event.EndDate),
             selectedState: findStateOption(props.event.WorkState),
             isDirty: false,
             waitingMessage: '',
@@ -264,15 +260,15 @@ export default class Event extends React.Component<IEventProps, IEventState> {
 
     private _saveEvent = (): void => {
         const { event } = this.state;
-
-        const propertiesToUpdate: ISpEvent = {
-            EventDate: (new Date(this.state.startDate.toLocaleDateString())).toISOString(),
-            EndDate: (new Date(this.state.endDate.toLocaleDateString())).toISOString(),
+        debugger;
+        const propertiesToUpdate = {
+            EventDate: McsUtil.convertToISO(this.state.startDate),
+            EndDate: McsUtil.convertToISO(this.state.endDate),
             MeetingStartTime: event.MeetingStartTime,
             Location: event.Location,
             Description: event.Description,
             fAllDayEvent: true,
-            Title: `${Mcs.WebConstants.webTitle} Committee Meeting ${this.state.startDate.toLocaleDateString()}`,
+            Title: `${Mcs.WebConstants.webTitle} Committee Meeting ${this.state.startDate.toDateString()}`,
             Category: event.Category,
             WorkAddress: event.WorkAddress,
             WorkCity: event.WorkCity,
@@ -286,7 +282,7 @@ export default class Event extends React.Component<IEventProps, IEventState> {
             CommitteeEventLookupId: event.CommitteeEventLookupId,
             HasLiveStream: event.HasLiveStream,
             IsBudgetHearing: event.IsBudgetHearing
-        };
+        } as ISpEvent;
         let promise: Promise<ISpEvent>;
         if (event.Id > 0) {
             this.setState({ waitingMessage: 'Editing meeting' });

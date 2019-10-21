@@ -27,12 +27,10 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
             useTime = false;
         } else {
             if (McsUtil.isDefined(props.agenda)) {
-                const tempdate = new Date(props.agenda.AgendaDate as string);
-                if (tempdate.getHours() == 0 && tempdate.getMinutes() == 0) {
+                agendaDate = McsUtil.convertToISONoAllDay(props.agenda.AgendaDate as string);
+                if (agendaDate.getHours() == 0 && agendaDate.getMinutes() == 0) {
                     useTime = false;
-                    agendaTime = tempdate.toLocaleTimeString();
-                } else {
-                    agendaDate = tempdate;
+                    agendaTime = agendaDate.toLocaleTimeString();
                 }
             }
         }
@@ -295,7 +293,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                     Title: agenda.AgendaTitle.length > 20 ? (agenda.AgendaTitle.substr(0, 20) + '...') : agenda.AgendaTitle,
                     AgendaTitle: agenda.AgendaTitle,
                     AgendaNumber: agenda.AgendaNumber,
-                    AgendaDate: agenda.AgendaDate,
+                    AgendaDate: this._getAgendaTimeToPost(),
                     EventLookupId: this.props.eventLookupId,
                     PresentersLookupId: {
                         __metadata: {
@@ -324,6 +322,15 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                 });
 
             });
+    }
+
+    private _getAgendaTimeToPost = (): string => {
+        const { agendaDate, agendaTime, useTime } = this.state;
+        let dtval = agendaDate.toLocaleDateString();
+        if (useTime) {
+            dtval = dtval + ' ' + agendaTime;
+        }
+        return McsUtil.convertToISO(new Date(dtval));
     }
 
     private _onEditPresenterClicked = (p: ISpPresenter): void => {

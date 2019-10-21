@@ -1,7 +1,17 @@
 import { combine, dateAdd, DateAddInterval } from "@pnp/common";
 import { Logger, LogLevel } from "@pnp/logging";
 
+let timeoffset: number = 0;
+
 export class McsUtil {
+    public static setTimeOffset(value: number): void {
+        timeoffset = value;
+    }
+
+    public static getTimeOffSet(): number {
+        return timeoffset;
+    }
+
     public static isDefined(n: any): boolean {
         return typeof n !== "undefined" && n !== null;
     }
@@ -254,21 +264,6 @@ export class McsUtil {
         return a;
     }
 
-    // public static formatDate(datevalue: string | Date, format: string): string {
-    //     if (McsUtil.isDefined(datevalue)) {
-    //         if (datevalue instanceof Date && !isNaN(datevalue.valueOf())) {
-    //             return datevalue.format(format);
-    //         }
-    //         if (McsUtil.isString(datevalue)) {
-    //             const d: Date = new Date(datevalue);
-    //             if (d instanceof Date && !isNaN(d.valueOf())) {
-    //                 return d.format(format);
-    //             }
-    //         }
-    //     }
-    //     return "";
-    // }
-
     public static chunkArray<T>(myArray: T[], chunkSize: number): T[][] {
         let index: number = 0;
         const arrayLength: number = myArray.length;
@@ -317,12 +312,34 @@ export class McsUtil {
         }
     }
 
-    public static convertUtcDateToLocalDate = (date: Date): Date => {
-        var newDate = new Date(date.getTime() + date.getTimezoneOffset() * 60 * 1000);
-        var offset = date.getTimezoneOffset() / 60;
-        var hours = date.getHours();
-        newDate.setHours(hours - offset);
-        return newDate;
+    /**
+     * Convert ISO date to match Sharepoint TimeZone
+     * Use this for all day event
+     * @param {string} isDateString
+     */
+    public static convertFromISO = (isDateString: string): Date => {
+        const date = new Date(isDateString);
+        date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+        return date;
+    }
+
+    public static convertToISONoAllDay = (isDateString: string): Date => {
+        const date = new Date(isDateString);
+        const minutesOffset = timeoffset - date.getTimezoneOffset();
+        if (minutesOffset) {
+            date.setMinutes(date.getMinutes() - minutesOffset);
+        }
+        return date;
+    }
+
+    public static convertToISO = (date: Date): string => {
+        const minutesOffset = timeoffset - date.getTimezoneOffset();
+        if (minutesOffset) {
+            const tempdate = new Date(date.getTime());
+            tempdate.setMinutes(tempdate.getMinutes() + minutesOffset);
+            return tempdate.toISOString();
+        }
+        return date.toISOString();
     }
 
     // public static createDownloadLink(fileName: string, data: any): void {
