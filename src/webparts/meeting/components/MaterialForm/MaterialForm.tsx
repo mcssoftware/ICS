@@ -404,8 +404,8 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     resolve(
                         val.map(a => {
                             return {
-                                value: a.AgencyName,
-                                label: a.AgencyName
+                                value: a.AgencyName === "." ? "LSO" : a.AgencyName,
+                                label: a.AgencyName === "." ? "LSO" : a.AgencyName
                             };
                         }));
                 });

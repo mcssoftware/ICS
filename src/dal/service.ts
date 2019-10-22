@@ -213,7 +213,12 @@ class Service {
             if (!McsUtil.isString(agencyName)) {
                 promise = this._agencyList.getListItems(null, null, null, [{ Field: 'AgencyName', IsAscending: true }], 0, 50);
             } else {
-                promise = this._agencyList.getListItems(`IsAgencyDirector eq 1 and (substringof('${agencyName}',AgencyName) or substringof('${agencyName}',Title))`, null, null,
+                const filters = [`substringof('${agencyName}',AgencyName)`, `substringof('${agencyName}',Title)`];
+                let agencyFilter = `IsAgencyDirector eq 1 and (${filters.join(' or ')})`;
+                if (agencyName.length < 4 && "lso".indexOf(agencyName.toLowerCase()) > -1) {
+                    agencyFilter = `AgencyName eq '.' or (${agencyFilter})`;
+                }
+                promise = this._agencyList.getListItems(agencyFilter, null, null,
                     [{ Field: 'AgencyName', IsAscending: true }], 0, 50);
             }
             promise.then((data: any[]) => {
