@@ -334,6 +334,15 @@ class BusinessLogic {
         });
     }
 
+    public delete_Document(id: number): void {
+        if (McsUtil.isUnsignedInt(id)) {
+            const index = findIndex(this._documentList, a => a.Id === id);
+            if (index > -1) {
+                this._documentList.splice(index, 1);
+            }
+        }
+    }
+
     public find_Agency(name: string): Promise<any[]> {
         return service.searchAgencyList(name);
     }

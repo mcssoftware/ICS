@@ -568,6 +568,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
     private _deleteMaterial = (): void => {
         const { document } = this.props;
         const { agenda } = this.state;
+        business.delete_Document(document.Id);
         this.props.onChange(document, agenda, OperationType.Delete);
     }
 

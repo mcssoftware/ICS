@@ -17,7 +17,7 @@ const materialDisplayPart: React.SFC<IMaterialDisplayProps> = (props) => {
 
     const displayAgendaMaterial = (agenda: IComponentAgenda, m: ISpEventMaterial) => {
         return (<li className={css.combine(styles["list-group-item"], styles["d-flex"], styles["p-0"])} style={{ whiteSpace: "normal" }}>
-            <Link href={m.File.ServerRelativeUrl}>{m.SortNumber} - {m.Title}</Link>
+            <Link href={m.File.ServerRelativeUrl}>{m.Title}</Link>
             <div style={{ marginLeft: 'auto!important' }}>
                 <IconButton iconProps={{ iconName: 'PageEdit' }} title="Edit" ariaLabel="Edit" onClick={() => props.onAddOrUpdateMaterial(agenda, m)} />
             </div>
