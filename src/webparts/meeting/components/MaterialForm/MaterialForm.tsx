@@ -20,13 +20,15 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         super(props);
         this._billVersions = [];
         this._enableDocumentAttachment = business.can_CreateBudgetMeeting();
+        const documentUploadType = this._enableDocumentAttachment ? DocumentUploadType.SessionDocuments : DocumentUploadType.InterimDocument;
         this.state = {
             selectedSubTopic: null,
             loadingBillVersion: false,
             // workingDoc: McsUtil.isDefined(props.document) ? { ...props.document } : {} as ISpEventMaterial,
             agenda: props.requireAgendaSelection ? null : (McsUtil.isArray(props.agenda) && props.agenda.length == 1 ? props.agenda[0] : null),
-            documentUploadType: this._enableDocumentAttachment ? DocumentUploadType.SessionDocuments : DocumentUploadType.InterimDocument,
+            documentUploadType,
             documentId: McsUtil.isDefined(props.document) ? props.document.Id : 0,
+            defaultAsyncDocuments: [],
             workingDocument: McsUtil.isDefined(props.document) ?
                 {
                     selectedAgency: {
@@ -43,6 +45,10 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                     lsoDocumentType: props.document.lsoDocumentType,
                 } : this._getFormDefaultValue()
         };
+    }
+
+    public componentDidMount(): void {
+        this._loadDefaultDocumentOptions(this.state.documentUploadType);
     }
 
     public render(): React.ReactElement<IMaterialFormProp> {
@@ -185,40 +191,41 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
             }
             {documentId == 0 && documentUploadType == DocumentUploadType.SessionDocuments &&
                 <div>
-                    <div className={styles.row}>
-                        <div className={styles["col-6"]}>
-                            <div className={marginClassName}>
-                                <Label>Providing Agency</Label>
-                                <AsyncSelect defaultOptions={true}
-                                    isClearable={true}
-                                    value={workingDocument.searchSelectedAgency}
-                                    onChange={this._searchAgencySelectChange}
-                                    loadOptions={this.loadAgencyOptionsForSearch} />
-                            </div>
-                        </div>
-                        <div className={styles["col-6"]}>
-                            <div className={marginClassName}>
-                                <Label>Document</Label>
-                                <AsyncSelect defaultOptions={false}
-                                    isClearable={true}
-                                    value={workingDocument.searchSelectedDocument}
-                                    onChange={this._searchDocumentSelectChange}
-                                    loadOptions={this.loadDocumentOptions} />
-                            </div>
+                <div className={styles.row}>
+                    <div className={styles["col-6"]}>
+                        <div className={marginClassName}>
+                            <Label>Providing Agency</Label>
+                            <AsyncSelect defaultOptions={true}
+                                isClearable={true}
+                                value={workingDocument.searchSelectedAgency}
+                                onChange={this._searchAgencySelectChange}
+                                loadOptions={this.loadAgencyOptionsForSearch} />
                         </div>
                     </div>
-                    <div>
-                        <div className={styles["col-6"]}>
-                            <div className={css.combine(marginClassName, styles["mt-2"], styles["d-flex"])}>
-                                <DefaultButton text="Attach Session Document"
-                                    disabled={!this._canAttachDocument()}
-                                    className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
-                                    style={{ maxWidth: '60%' }}
-                                    onClick={this._attachMaterial} />
-                            </div>
+                    <div className={styles["col-6"]}>
+                        <div className={marginClassName}>
+                            <Label>Document</Label>
+                            <AsyncSelect 
+                                isClearable={true}
+                                value={workingDocument.searchSelectedDocument}
+                                onChange={this._searchDocumentSelectChange}
+                                defaultOptions={this.state.defaultAsyncDocuments}
+                                loadOptions={this.loadDocumentOptions} />
                         </div>
                     </div>
                 </div>
+                <div>
+                    <div className={styles["col-6"]}>
+                        <div className={css.combine(marginClassName, styles["mt-2"], styles["d-flex"])}>
+                            <DefaultButton text="Attach Session Document"
+                                disabled={!this._canAttachDocument()}
+                                className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
+                                style={{ maxWidth: '60%' }}
+                                onClick={this._attachMaterial} />
+                        </div>
+                    </div>
+                </div>
+            </div>
             }
             {documentId != 0 && <div>
                 <div className={styles.row}>
@@ -292,7 +299,9 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
 
     private _onUploadTypeSelected = (event: any, option?: IDropdownOption) => {
         const workingDocument = this._getFormDefaultValue();
-        this.setState({ documentUploadType: option.key as DocumentUploadType, workingDocument });
+        const documentUploadType = option.key as DocumentUploadType;
+        this.setState({ documentUploadType, workingDocument });
+        this._loadDefaultDocumentOptions(documentUploadType);
     }
 
     private _onDocTextPropertyChange = (event: React.FormEvent<HTMLInputElement>, newValue?: string): void => {
@@ -300,7 +309,6 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         workingDoc[(event.target as HTMLInputElement).name] = newValue;
         this.setState({ workingDocument: workingDoc });
     }
-
 
     private _onIncludeWithAgendaChange = (ev?: any, checked?: boolean): void => {
         const workingDocument = cloneDeep(this.state.workingDocument);
@@ -373,6 +381,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
         let { workingDocument } = this.state;
         workingDocument = { ...workingDocument, searchSelectedAgency: value };
         this.setState({ workingDocument });
+        this._loadDefaultDocumentOptions(this.state.documentUploadType);
     }
 
     private _searchDocumentSelectChange = (value): void => {
@@ -417,10 +426,17 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                 .then((val) => {
                     resolve(
                         val.map(a => {
-                            return {
-                                value: a.Title,
-                                label: a.AgencyName
-                            };
+                            if (a.AgencyName === ".") {
+                                return {
+                                    value: "LSO",
+                                    label: "LSO"
+                                };
+                            } else {
+                                return {
+                                    value: a.Title,
+                                    label: a.AgencyName
+                                };
+                            }
                         }));
                 });
         })
@@ -453,6 +469,18 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                 this.setState({ loadingBillVersion: false });
             }
         })
+
+    private _loadDefaultDocumentOptions = (documentType: DocumentUploadType) => {
+        if (documentType === DocumentUploadType.SessionDocuments) {
+            this.loadDocumentOptions('').then((result: any[]) => {
+                this.setState({ defaultAsyncDocuments: result });
+            });
+        } else {
+            if (this.state.defaultAsyncDocuments.length > 0) {
+                this.setState({ defaultAsyncDocuments: [] });
+            }
+        }
+    }
 
     private loadDocumentOptions = (inputValue) =>
         new Promise((resolve) => {

@@ -40,4 +40,5 @@ export interface IMaterialFormState {
     documentId: number;
     waitingMessage?: string;
     loadingBillVersion: boolean;
+    defaultAsyncDocuments: any[];
 }

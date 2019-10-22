@@ -174,10 +174,15 @@ export default class Event extends React.Component<IEventProps, IEventState> {
                 </div>
                 <div className={styles.row}>
                     <div className={styles["col-sm-6"]}>
-                        <Toggle className={marginClassName} label="Will meeting be live streamed?" />
+                        <Toggle className={marginClassName} defaultChecked={event.HasLiveStream}
+                            onChange={(ev, checked) => this._onToggleChanged('HasLiveStream', checked)}
+                            label="Will meeting be live streamed?" />
                     </div>
                     <div className={styles["col-sm-6"]}>
-                        <Toggle className={marginClassName} label="Is budget hearing?" disabled={!enableBudgetHearing} />
+                        <Toggle className={marginClassName} defaultChecked={event.IsBudgetHearing}
+                            label="Is budget hearing?"
+                            onChange={(ev, checked) => this._onToggleChanged('IsBudgetHearing', checked)}
+                            disabled={!enableBudgetHearing} />
                     </div>
                 </div>
                 <div className={styles.row}>
@@ -253,6 +258,12 @@ export default class Event extends React.Component<IEventProps, IEventState> {
         if (McsUtil.isDefined(date)) {
             this.setState({ endDate: date, isDirty: true });
         }
+    }
+
+    private _onToggleChanged = (propname: string, checked: boolean): void => {
+        const event = { ...this.state.event };
+        event[propname] = checked;
+        this.setState({ event, isDirty: this._isDirty(event) });
     }
 
     private _onInputTxtChanged = (ev: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string): void => {
