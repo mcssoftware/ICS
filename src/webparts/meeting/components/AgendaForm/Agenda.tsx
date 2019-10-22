@@ -297,9 +297,8 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
                 }
                 this.setState({ agendaItems: tempAgenda, showPanel: false, waitingMessage: '' });
             } else {
-                this.setState({ showPanel: false, waitingMessage: 'Updating agenda and event' });
+                this.setState({ showPanel: false, waitingMessage: 'Attaching document to meeting.' });
                 const event = business.get_Event();
-                this.setState({ waitingMessage: "Attaching document to meeting." });
                 const eventPropToUpdate = {};
                 const eventLookupField = business.get_EventDocumentLookupField();
                 const lookupids = this._getDocumentLookupIds((McsUtil.isArray(event[eventLookupField]) ? event[eventLookupField] as number[] : []), document.Id, type);

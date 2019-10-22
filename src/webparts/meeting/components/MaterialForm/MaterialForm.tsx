@@ -251,10 +251,15 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
                 </div>
                 <div className={css.combine(styles.row, styles["mt-2"])}>
                     <div className={styles["col-6"]}>
-                        <DefaultButton text={"Update Document"}
-                            disabled={!this._canUpdateDocument()}
-                            className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
-                            onClick={this._updateMaterial} />
+                        <div className={css.combine(styles["d-flex"])}>
+                            <DefaultButton text={"Update Document"}
+                                disabled={!this._canUpdateDocument()}
+                                className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
+                                onClick={this._updateMaterial} />
+                            <DefaultButton text={"Delete Document"}
+                                className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
+                                onClick={this._deleteMaterial} />
+                        </div>
                     </div>
                 </div>
             </div>}
@@ -558,6 +563,12 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
             this.setState({ waitingMessage: "" });
             this.props.onChange(value, McsUtil.isDefined(selectedSubTopic) ? selectedSubTopic : agenda, OperationType.Edit);
         });
+    }
+
+    private _deleteMaterial = (): void => {
+        const { document } = this.props;
+        const { agenda } = this.state;
+        this.props.onChange(document, agenda, OperationType.Delete);
     }
 
     private _attachMaterial = (): void => {
