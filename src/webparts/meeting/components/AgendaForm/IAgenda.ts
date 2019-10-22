@@ -1,4 +1,4 @@
-import { ISpPresenter} from "../../../../interface/spmodal";
+import { ISpPresenter, OperationType } from "../../../../interface/spmodal";
 import { IComponentAgenda } from "../../../../business/transformAgenda";
 import { InformationalType } from "../../../../controls/informational";
 
@@ -35,7 +35,7 @@ export interface IAgendaFormProps {
   agendaNumber: number;
   minDate?: Date;
   maxDate?: Date;
-  onChange: (topic: IComponentAgenda, parentTopicId?: number) => void;
+  onChange: (topic: IComponentAgenda, operationType : OperationType, parentTopicId?: number) => void;
   onCancel: () => void;
 }
 

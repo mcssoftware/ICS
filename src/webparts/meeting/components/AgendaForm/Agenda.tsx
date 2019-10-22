@@ -176,15 +176,20 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
         this.setState({ agendaItems: items, orderChanged: true });
     }
 
-    private _onNewAgendaAddedOrEdited = (topic: IComponentAgenda, parentTopicId?: number): void => {
+    private _onNewAgendaAddedOrEdited = (topic: IComponentAgenda, operationType: OperationType, parentTopicId?: number): void => {
         const agendaCopy = [...this.state.agendaItems];
         let message = '';
         if (McsUtil.isDefined(parentTopicId)) {
             const agendaIndex = findIndex(agendaCopy, a => a.Id === parentTopicId);
             const subtopicIndex = findIndex(agendaCopy[agendaIndex].SubTopics, a => a.Id === topic.Id);
             if (subtopicIndex >= 0) {
-                agendaCopy[agendaIndex].SubTopics[subtopicIndex] = topic;
-                message = 'Subtopic updated';
+                if (operationType === OperationType.Delete) {
+                    agendaCopy[agendaIndex].SubTopics.splice(subtopicIndex, 1);
+                    message = 'Subtopic deleted';
+                } else {
+                    agendaCopy[agendaIndex].SubTopics[subtopicIndex] = topic;
+                    message = 'Subtopic updated';
+                }
             } else {
                 agendaCopy[agendaIndex].SubTopics.push(topic);
                 message = 'Subtopic added';
@@ -192,10 +197,16 @@ export default class Agenda extends React.Component<IAgendaProps, IAgendaState> 
         } else {
             const agendaIndex = findIndex(agendaCopy, a => a.Id === topic.Id);
             if (agendaIndex >= 0) {
-                agendaCopy[agendaIndex] = topic;
-                message = 'Topic updated';
+                if (operationType === OperationType.Delete) {
+                    agendaCopy.splice(agendaIndex, 1);
+                    message = 'Topic deleted';
+                } else {
+                    agendaCopy[agendaIndex] = topic;
+                    message = 'Topic updated';
+                }
             } else {
-                message = 'Subtopic added';
+
+                message = 'Topic added';
                 agendaCopy.push(topic);
             }
         }

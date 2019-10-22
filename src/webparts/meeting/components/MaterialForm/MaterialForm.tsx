@@ -507,7 +507,7 @@ export default class MaterialForm extends React.Component<IMaterialFormProp, IMa
             IncludeWithAgenda: workingDocument.includeWithAgenda,
             SortNumber: parseInt(workingDocument.sortNumber),
         };
-        const file: File = workingDocument.uploadFile.item[0];
+        const file: File = workingDocument.uploadFile[0];
         this.setState({ waitingMessage: "Uploading file" });
         business.upLoad_Document(business.get_FolderNameToUpload(uploadProperties.lsoDocumentType), file.name, uploadProperties, file)
             .then((value: ISpEventMaterial) => {

@@ -6,7 +6,7 @@ import { Waiting } from '../../../../controls/waiting';
 import css from '../../../../utility/css';
 import { McsUtil } from '../../../../utility/helper';
 import { sortBy, cloneDeep, findIndex } from "@microsoft/sp-lodash-subset";
-import { ISpPresenter, ISpAgendaTopic } from '../../../../interface/spmodal';
+import { ISpPresenter, ISpAgendaTopic, OperationType } from '../../../../interface/spmodal';
 import datePickerStrings from '../../../../utility/datePickerStrings';
 import { Timepicker } from '../../../../controls/timepicker';
 import { business } from '../../../../business';
@@ -64,6 +64,7 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
         const { isSubTopic } = this.props;
         const { useTime, agenda, agendaTime, agendaDate, waitingMessage, presenter } = this.state;
         const cansaveAgenda = this._canSaveAgenda(agenda);
+        const canDeleteAgenda = this._canDeleteAgenda(agenda);
         const canSavePresenter = this._canSavePresenter(presenter);
         const presenter_col_1_Width = '110px';
         return (<div className={css.combine(styles["d-flex"], styles["flex-column"], styles["justify-content-between"])}>
@@ -204,6 +205,11 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                     disabled={!cansaveAgenda}
                     style={cansaveAgenda ? {} : { opacity: .4 }}
                     onClick={this._onSaveClicked} />
+                <DefaultButton text="Delete"
+                    className={css.combine(styles["mr-2"], styles["bg-primary"], styles["text-white"])}
+                    disabled={!canDeleteAgenda}
+                    style={canDeleteAgenda ? {} : { opacity: .4 }}
+                    onClick={this._onDeleteClicked} />
                 <DefaultButton text="Cancel"
                     className={css.combine(styles["ml-2"], styles["bg-light"], styles["text-dark"])}
                     onClick={this._dismisModal} />
@@ -217,6 +223,20 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
         if (McsUtil.isDefined(agenda) && McsUtil.isString(agenda.AgendaTitle) && !this._canSavePresenter(this.state.presenter)) {
             if (this.props.isSubTopic) {
                 return McsUtil.isUnsignedInt(agenda.AgendaNumber);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private _canDeleteAgenda = (agenda: IComponentAgenda): boolean => {
+        if (agenda.Id > 0) {
+            if (McsUtil.isArray(agenda.SubTopics) && agenda.SubTopics.length > 0) {
+                return false;
+            } else {
+                if (McsUtil.isArray(agenda.Documents) && agenda.Documents.length > 0) {
+                    return false;
+                }
             }
             return true;
         }
@@ -323,10 +343,26 @@ export default class AgendaForm extends React.Component<IAgendaFormProps, IAgend
                         result.SubTopics = [...agenda.SubTopics];
                     }
                     this.setState({ agenda: result, waitingMessage: '' });
-                    this.props.onChange(result, this.props.isSubTopic ? this.props.parentTopicId : undefined);
+                    this.props.onChange(result, agenda.Id > 0 ? OperationType.Edit : OperationType.Add, this.props.isSubTopic ? this.props.parentTopicId : undefined);
                 });
 
             });
+    }
+
+    private _onDeleteClicked = (): void => {
+        const agenda = this.state.agenda;
+        let deletePresenters: Promise<void>[];
+        if (agenda.Presenters.length > 0) {
+            deletePresenters = agenda.Presenters.map((a) => { return business.delete_Presenter(a.Id); });
+        } else {
+            deletePresenters = [];
+            deletePresenters.push(Promise.resolve());
+        }
+        Promise.all(deletePresenters).then(() => {
+            return business.delete_Agenda(agenda.Id);
+        }).then(() => {
+            this.props.onChange(this.state.agenda, OperationType.Delete, this.props.isSubTopic ? this.props.parentTopicId : undefined);
+        }).catch();
     }
 
     private _getAgendaTimeToPost = (): string => {
