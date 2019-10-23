@@ -26,7 +26,7 @@ const materialDisplayPart: React.SFC<IMaterialDisplayProps> = (props) => {
 
     return (
         <div className={styles.card}>
-            {McsUtil.isArray(props.agenda.Documents) && props.agenda.Documents.length > 0 && <div className={styles["card-body"]}>
+            <div className={styles["card-body"]}>
                 <ul className={styles["list-group"]}>
                     {props.agenda.Documents.map((m) => { return displayAgendaMaterial(props.agenda, m); })}
                     {McsUtil.isArray(props.agenda.SubTopics) && props.agenda.SubTopics.length > 0 &&
@@ -37,7 +37,7 @@ const materialDisplayPart: React.SFC<IMaterialDisplayProps> = (props) => {
                         })
                     }
                 </ul>
-            </div>}
+            </div>
             <div className={styles["card-footer"]}>
                 <CommandBarButton iconProps={uploadIcon} text="Upload Material" onClick={() => { props.onAddOrUpdateMaterial(props.agenda, void (0)); }} />
             </div>
